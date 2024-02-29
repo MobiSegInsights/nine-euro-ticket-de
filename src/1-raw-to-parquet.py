@@ -34,6 +34,9 @@ class DataPrep:
                 print(f'Processing year {y} - month {m}:')
                 devices_m = []
                 days_list = get_day_list(month=m)
+                # Due to an accident, this date is lost
+                if m == '05':
+                    days_list.remove('14')
                 for day in days_list:
                     df_list = []
                     path = os.path.join(self.raw_data_folder, f'raw_data_de_{y}', m, day)
@@ -113,19 +116,26 @@ def get_day_list(month=None):
 
 
 if __name__ == '__main__':
-    print('Processing .csv.gz into database by day:')
-    data_prep = DataPrep()
-    data_prep.device_grouping(num_groups=300)
-    days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
-    cols = ['timestamp', 'device_aid', 'latitude', 'longitude', 'location_method']
-    for y in (2019, 2022, 2023):
-        for m in ('05', '06', '07', '08', '09'):
-            print(f'Processing year {y} - month {m}:')
-            start = time.time()
-            days_list = get_day_list(month=m)
-            for day in days_list:
-                data_prep.process_data(selectedcols=cols, year=y, month=m, day=day)
-                data_prep.dump_to_parquet(year=y, month=m, day=day)
-            end = time.time()
-            time_elapsed = (end - start)//60 #  in minutes
-            print(f"Month {m} processed in {time_elapsed} minutes.")
+    stage = 1
+    if stage == 1:
+        print('Processing .csv.gz to log all device ids:')
+        data_prep = DataPrep()
+        data_prep.device_grouping(num_groups=300)
+    else:
+        print('Processing .csv.gz into parquet by day:')
+        days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
+        cols = ['timestamp', 'device_aid', 'latitude', 'longitude', 'location_method']
+        for y in (2019, 2022, 2023):
+            for m in ('05', '06', '07', '08', '09'):
+                print(f'Processing year {y} - month {m}:')
+                start = time.time()
+                days_list = get_day_list(month=m)
+                # Due to an accident, this date is lost
+                if m == '05':
+                    days_list.remove('14')
+                for day in days_list:
+                    data_prep.process_data(selectedcols=cols, year=y, month=m, day=day)
+                    data_prep.dump_to_parquet(year=y, month=m, day=day)
+                end = time.time()
+                time_elapsed = (end - start)//60 #  in minutes
+                print(f"Month {m} processed in {time_elapsed} minutes.")
