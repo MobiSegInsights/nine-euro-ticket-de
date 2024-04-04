@@ -15,12 +15,14 @@ sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
 
 def by_batch(data):
-    data.loc[:, "utm_x"] = data.apply(lambda row: utm.from_latlon(row['latitude'], row['longitude'])[0],
-                                      axis=1)
-    data.loc[:, "utm_y"] = data.apply(lambda row: utm.from_latlon(row['latitude'], row['longitude'])[1],
-                                      axis=1)
+    def utm_converter(row):
+        try:
+            res = utm.from_latlon(row['latitude'], row['longitude'])
+            return [res[0], res[1]]
+        except:
+            return [np.nan, np.nan]
+    data[['utm_x', 'utm_y']] = data.apply(utm_converter, axis=1, result_type ='expand')
     return data
-
 
 
 class DataPrep:
@@ -60,9 +62,10 @@ class DataPrep:
         file_path = os.path.join(ROOT_dir, 'dbs/devices_grp.parquet')
         if os.path.isfile(file_path):
             print('Loading existing groups...')
-            devices = pd.read_parquet(file_path) # uid, batch = group
-            # sself.devices.rename(columns={'batch': 'grp'}, inplace=True)
-            self.devices = {x: devices.loc[devices.batch == x, 'uid'].to_list() for x in range(0, num_groups)}
+            self.devices = pd.read_parquet(file_path) # uid, batch = group
+            self.devices.rename(columns={'uid': 'device_aid', 'batch': 'grp'}, inplace=True)
+            # self.devices.rename(columns={'batch': 'grp'}, inplace=True)
+            # self.devices = {x: devices.loc[devices.batch == x, 'uid'].to_list() for x in range(0, num_groups)}
         else:
             print('Grouping users...')
             devices = []
@@ -109,21 +112,31 @@ class DataPrep:
             print('Process coordinates...')
             rstl = p_map(by_batch, [g for _, g in temp_.groupby('batch', group_keys=True)])
             temp_ = pd.concat(rstl)
+            del rstl
             temp_.drop(columns=['batch'], inplace=True)
+            print('Adding group id to device_aids...')
+            temp_ = pd.merge(temp_, self.devices[['device_aid', 'grp']],
+                             on='device_aid', how='left')
             self.data.append(temp_)
-            del rstl, temp_
+            del temp_
         end = time.time()
         print(f"Data processed in {(end - start)/60} minutes.")
 
-    def write_out(self, grp=None, year=None, month=None, day=None):
+    def write_out(self, year=None, month=None, day=None):
         dirs = [x[0] for x in os.walk(self.converted_data_folder)]
-        target_dir = os.path.join(self.converted_data_folder, 'grp_' + str(grp))
-        if target_dir not in dirs:
-            os.makedirs(target_dir)
-            print("created folder : ", target_dir)
+
+        def write_data(data=None, hf=None):
+            grp = data.name
+            target_dir = os.path.join(self.converted_data_folder, 'grp_' + str(grp))
+            if target_dir not in dirs:
+                os.makedirs(target_dir)
+                print("created folder : ", target_dir)
+            data.to_parquet(os.path.join(target_dir, f'{year}_' + month + '_' + day + f'_{hf}.parquet'))
+
         for d, hf in zip(self.data, (1, 2)):
-            d.loc[d.device_aid.isin(self.devices[grp]), :].\
-                to_parquet(os.path.join(target_dir, f'{year}_' + month + '_' + day + f'_{hf}.parquet'))
+            print(f'Saving half {hf}')
+            tqdm.pandas()
+            d.groupby('grp').progress_apply(lambda x: write_data(data=x, hf=hf))
 
     def dump_to_parquet(self, day=None, year=None, month=None):
         # Save data to database
@@ -131,10 +144,6 @@ class DataPrep:
         print('Saving data...')
         for grp in tqdm(range(0, len(self.devices)), desc='Saving data'):
             self.write_out(grp=grp, year=year, day=day, month=month)
-        # for i in range(1, 11): # There are 300 groups
-        #     print(f'Batch {i}/10 is dumping...')
-        #     p_umap(lambda x: self.write_out(grp=x, year=year, day=day, month=month),
-        #           range(30*(i-1), 30*i))
         self.data = None
         end = time.time()
         print(f"Data saved in {(end - start)/60} minutes.")
@@ -165,18 +174,20 @@ if __name__ == '__main__':
         data_prep = DataPrep()
         print('Prepare batches...')
         data_prep.device_grouping(num_groups=300)
-        # To start with (2019, '06', '15')
+        # To start with (2019, '06', '25')
         trackers = [(x, y) for x in (2019, 2022, 2023) for y in ('05', '06', '07', '08', '09')]
-        trackers.remove((2019, '05'))
+        for item in [(2019, '05'), (2019, '06'), (2019, '07')]:
+            trackers.remove(item)
         for y, m in trackers:
             print(f'Processing year {y} - month {m}:')
             start = time.time()
             days_list = get_day_list(month=m)
-            if (m == '06') & (y == 2019):
-                del days_list[:14]
+            if (m == '08') & (y == 2019):
+                del days_list[:17]
             for day in days_list:
                 data_prep.process_data(selectedcols=cols, year=y, month=m, day=day)
-                data_prep.dump_to_parquet(year=y, month=m, day=day)
+                data_prep.write_out(year=y, month=m, day=day)
+                # data_prep.dump_to_parquet(year=y, month=m, day=day)
             end = time.time()
             time_elapsed = (end - start)//60    #  in minutes
             print(f"Month {m} processed in {time_elapsed} minutes.")
