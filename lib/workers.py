@@ -90,11 +90,11 @@ class TimeProcessing:
                      [k for k, _ in part2.groupby('tzname', group_keys=True)],
                      [g for _, g in part2.groupby('tzname', group_keys=True)])
         self.data = pd.concat(rstl1 + rstl2)
-        print(self.data.iloc[0])
+        # print(self.data.iloc[0])
 
     def time_enrich(self):
         # Add start time hour and duration in minute
-        # self.data['localtime'] = pd.to_datetime(self.data['localtime'], errors='coerce')
+        self.data['localtime'] = pd.to_datetime(self.data['localtime'], errors='coerce')
         self.data.loc[:, 'hour'] = self.data.loc[:, 'localtime'].dt.hour
         self.data.loc[:, 'weekday'] = self.data.loc[:, 'localtime'].dt.dayofweek
         self.data.loc[:, 'week'] = self.data.loc[:, 'localtime'].dt.isocalendar().week
