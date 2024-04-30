@@ -13,7 +13,7 @@ from infostop import Infostop
 import sqlalchemy
 
 
-ROOT_dir = Path(__file__).parent.parent
+ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
 sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
@@ -156,6 +156,6 @@ class StopDetection:
 if __name__ == '__main__':
     sd = StopDetection()
     sd.file_list()
-    # Batch 0-195 are done
-    for batch in range(196, 300):
+    # All batches are done
+    for batch in range(0, 300):
         sd.stop_batch(batch=batch)

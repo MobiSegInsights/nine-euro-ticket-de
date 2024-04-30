@@ -12,7 +12,7 @@ from pyspark import SparkConf
 import sqlalchemy
 
 
-ROOT_dir = Path(__file__).parent.parent
+ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
 sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 

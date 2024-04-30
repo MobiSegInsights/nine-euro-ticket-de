@@ -9,7 +9,7 @@ from tqdm import tqdm
 import numpy as np
 
 
-ROOT_dir = Path(__file__).parent.parent
+ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
 sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
@@ -56,10 +56,10 @@ class DataPrep:
             del temp_
         devices_m = np.unique(np.concatenate(devices_m))
         devices_m = pd.DataFrame(devices_m, columns=['uid'])
-        devices_m.to_parquet(f'dbs/devices_{year}_{month}.parquet', index=False)
+        devices_m.to_parquet(f'dbs/devices/devices_{year}_{month}.parquet', index=False)
 
     def device_grouping(self, num_groups=300):
-        file_path = os.path.join(ROOT_dir, 'dbs/devices_grp.parquet')
+        file_path = os.path.join(ROOT_dir, 'dbs/devices/devices_grp.parquet')
         if os.path.isfile(file_path):
             print('Loading existing groups...')
             self.devices = pd.read_parquet(file_path) # uid, batch = group
@@ -73,7 +73,7 @@ class DataPrep:
                 year_df_list = []
                 for month in ('05', '06', '07', '08', '09'):
                     print(f'Processing {year} - {month}...')
-                    year_df_list.append(pd.read_parquet(os.path.join(ROOT_dir, f'dbs/devices_{year}_{month}.parquet')))
+                    year_df_list.append(pd.read_parquet(os.path.join(ROOT_dir, f'dbs/devices/devices_{year}_{month}.parquet')))
                 df_year = pd.concat(year_df_list)
                 del year_df_list
                 df_year.drop_duplicates(subset=['uid'], inplace=True)
