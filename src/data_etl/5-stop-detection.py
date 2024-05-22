@@ -3,21 +3,18 @@ import pandas as pd
 import time
 import os
 os.environ['JAVA_HOME'] = "C:/Java/jdk-1.8"
-from tqdm import tqdm
 from pyspark.sql import SparkSession
 import sys
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 from pyspark import SparkConf
 from infostop import Infostop
-import sqlalchemy
 
 
 ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
 sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
-import workers as workers
 
 # Set up pyspark
 os.environ['PYSPARK_PYTHON'] = sys.executable
@@ -55,8 +52,10 @@ def infostop_per_user(key, data):
         weighted=False,
         weight_exponent=1,
         verbose=False,)
+    # Remove abnormal and low-precision GPS records
     x = data.loc[~(((data['latitude'] > 84) | (data['latitude'] < -80)) | ((data['longitude'] > 180) | (data['longitude'] < -180))), :]
-    x = x.sort_values(by='timestamp').drop_duplicates(subset=['latitude', 'longitude', 'timestamp']).reset_index(drop=True)
+    x = x.sort_values(by='timestamp').drop_duplicates(subset=['latitude', 'longitude', 'timestamp']).\
+        reset_index(drop=True)
     x = x.dropna()
 
     x['t_seg'] = x['timestamp'].shift(-1)
@@ -81,7 +80,7 @@ def infostop_per_user(key, data):
     # x['same_timezone'] = x['timezone']==x['timezone'].shift()
     x['little_time'] = (x['timestamp'] - x['timestamp'].shift() < MAX_TIME_BETWEEN*60*60)
 
-    x['interval'] = (~(x['same_loc'] & x['little_time'])).cumsum() # & x['same_timezone']
+    x['interval'] = (~(x['same_loc'] & x['little_time'])).cumsum()  # & x['same_timezone']
 
     latitudes = {k: v[0] for k, v in label_medians.items()}
     longitudes = {k: v[1] for k, v in label_medians.items()}
@@ -109,14 +108,10 @@ schema = StructType([StructField('loc', IntegerType()),
 class StopDetection:
     def __init__(self):
         self.file_paths_dict = None
-        self.user = workers.keys_manager['database']['user']
-        self.password = workers.keys_manager['database']['password']
-        self.port = workers.keys_manager['database']['port']
-        self.db_name = workers.keys_manager['database']['name']
 
     def file_list(self):
         # File location and structure
-        data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet'
+        data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r'
         paths = [x[0] for x in os.walk(data_folder)]
         paths = paths[1:]
         self.file_paths_dict = dict()
@@ -127,8 +122,6 @@ class StopDetection:
             self.file_paths_dict[bt] = file_paths   # 300 groups of users
 
     def stop_batch(self, batch=None):
-        engine = sqlalchemy.create_engine(
-            f'postgresql://{self.user}:{self.password}@localhost:{self.port}/{self.db_name}?gssencmode=disable')
         print(f'Processing user group {batch}:')
         start = time.time()
         file_paths = self.file_paths_dict[batch]
@@ -145,8 +138,6 @@ class StopDetection:
         df_stops['batch'] = batch
         # Save data to database
         print("Saving data...")
-        # df_stops.to_sql('stops', engine, schema='stops', index=False, if_exists='append',
-        #                 method='multi', chunksize=5000)
         df_stops.to_parquet(os.path.join(ROOT_dir, f'dbs/stops/stops_{batch}.parquet'), index=False)
         end = time.time()
         time_elapsed = (end - start) // 60  # in minutes
@@ -156,6 +147,6 @@ class StopDetection:
 if __name__ == '__main__':
     sd = StopDetection()
     sd.file_list()
-    # All batches are done
-    for batch in range(0, 300):
+    # Batch 0-197 are finished / 64
+    for batch in (64, 204):  # range(0, 300)
         sd.stop_batch(batch=batch)

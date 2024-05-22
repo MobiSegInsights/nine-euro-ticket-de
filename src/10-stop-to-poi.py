@@ -7,7 +7,6 @@ import geopandas as gpd
 import skmob
 from skmob.measures.individual import home_location
 from p_tqdm import p_map
-from tqdm import tqdm
 import time
 import numpy as np
 import sqlalchemy

@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import utm
 import time
-from p_tqdm import p_map, p_umap
+from p_tqdm import p_map
 from tqdm import tqdm
 import numpy as np
 

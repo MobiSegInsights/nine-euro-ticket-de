@@ -100,7 +100,7 @@ class StopsProcessing:
 
     def home_detection_filtering(self, grp_num=20):
         np.random.seed(68)
-        device2group = {x: np.random.randint(1, 21) for x in list(self.data.device_aid.unique())}
+        device2group = {x: np.random.randint(1, grp_num+1) for x in list(self.data.device_aid.unique())}
         self.data.loc[:, 'home2grp'] = self.data['device_aid'].map(device2group)
         devices2keep = p_map(indi_traj2home, [g for _, g in self.data.groupby('home2grp', group_keys=True)])
         devices2keep = list(itertools.chain(*devices2keep))

@@ -3,6 +3,7 @@
 dbs
 legacy
 src/osm2pgsql-1.9.1-x64
+figures/visits_day_desc
 *.pyc
 .ipynb_checkpoints
 .Rhistory

@@ -199,3 +199,42 @@ def df2gdf_point(df, x_field, y_field, crs=4326, drop=True):
         gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
     gdf.set_crs(epsg=crs, inplace=True)
     return gdf
+
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees) in km
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    r = 6371 # Radius of earth in kilometers. Use 3956 for miles
+    return c * r
+
+
+def haversine_vec(data):
+    """
+    Take array of zones' centroids to return the Haversine distance matrix
+    :param data: 2d array e.g., list(zones.loc[:, ["Y", "X"]].values)
+    :return: a matrix of distance
+    """
+    # Convert to radians
+    data = np.deg2rad(data)
+
+    # Extract col-1 and 2 as latitudes and longitudes
+    lat = data[:, 0]
+    lng = data[:, 1]
+
+    # Elementwise differentiations for latitudes & longitudes
+    diff_lat = lat[:, None] - lat
+    diff_lng = lng[:, None] - lng
+
+    # Finally Calculate haversine
+    d = np.sin(diff_lat / 2) ** 2 + np.cos(lat[:, None]) * np.cos(lat) * np.sin(diff_lng / 2) ** 2
+    return 2 * 6371 * np.arcsin(np.sqrt(d))
