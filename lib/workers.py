@@ -1,20 +1,18 @@
 import os
-from pathlib import Path
 import yaml
 import pandas as pd
-from geoalchemy2 import Geometry, WKTElement
 from pathlib import Path
 import numpy as np
 from datetime import datetime
-import sqlalchemy
-import time
 from tqdm import tqdm
 from p_tqdm import p_map
-import multiprocessing
+from statsmodels.stats.weightstats import DescrStatsW
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
 from math import radians, cos, sin, asin, sqrt
 from timezonefinder import TimezoneFinder
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 ROOT_dir = Path(__file__).parent.parent
@@ -23,6 +21,44 @@ with open(os.path.join(ROOT_dir, 'dbs', 'keys.yaml')) as f:
 
 
 de_box = (5.98865807458, 47.3024876979, 15.0169958839, 54.983104153)
+
+
+def bootstrap_median_and_error(df, target_col, weight_col, n_bootstrap=1000):
+    """
+    Calculate the bootstrap median and error of a dataframe with target value and weight columns.
+
+    Parameters:
+    - df: pandas DataFrame containing the data
+    - target_col: str, name of the target value column
+    - weight_col: str, name of the weight column
+    - n_bootstrap: int, number of bootstrap samples to draw
+
+    Returns:
+    - median: float, estimated median of the target values
+    - median_error: float, standard error of the bootstrap medians
+    """
+    target_values = df[target_col].values
+    wts = df[weight_col].values
+
+    bootstrap_medians = []
+
+    for _ in range(n_bootstrap):
+        # Resample with replacement
+        resample_indices = np.random.choice(len(target_values), size=len(target_values), replace=True)
+        resampled_values = target_values[resample_indices]
+        resampled_weights = wts[resample_indices]
+
+        # Calculate weighted median for resample
+        wdf = DescrStatsW(resampled_values, weights=resampled_weights, ddof=1)
+        sts = wdf.quantile([0.50])
+        median = sts.values[0]
+        bootstrap_medians.append(median)
+
+    # Calculate the median and standard error of the bootstrap medians
+    median_estimate = np.median(bootstrap_medians)
+    median_error = np.std(bootstrap_medians)
+
+    return median_estimate, median_error
 
 
 def get_timezone(longitude, latitude):

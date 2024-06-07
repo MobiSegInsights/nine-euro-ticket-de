@@ -14,9 +14,9 @@ library(ggExtra)
 library(ggthemes)
 options(scipen=10000)
 
-df.y <- as.data.frame(read_parquet('results/yearly_poi_visitation.parquet'))
-df.lb <- as.data.frame(read_parquet('results/label_poi_visitation.parquet'))
-df <- as.data.frame(read_parquet('results/label_poi_visitation_delta.parquet'))
+df.y <- as.data.frame(read_parquet('results/yearly_poi_visitation_sg.parquet'))
+df.lb <- as.data.frame(read_parquet('results/label_poi_visitation_sg.parquet'))
+df <- as.data.frame(read_parquet('results/label_poi_visitation_delta_sg.parquet'))
 
 # ---------------- No. of unique POIs by year and label ----
 df.y.total <- df.y %>%
@@ -73,7 +73,7 @@ g3 <- ggplot(data = df2plot, aes(y=label, x=num_pop/1000000,
   labs(x = "No. of equivalent visitors (million)", y = "POI type")
 
 G <- ggarrange(g1, g2, g3, ncol = 3, nrow = 1, labels = c('a', 'b', 'c'))
-ggsave(filename = "figures/visits_day_desc/poi_share_year.png", plot=G,
+ggsave(filename = "figures/visits_day_desc/poi_share_year_sg.png", plot=G,
        width = 15, height = 7, unit = "in", dpi = 300, bg = 'white')
 
 # ---- No. of unique devices by year, month, weekday, and label ----
@@ -119,7 +119,7 @@ for (lb2plot in lbs.top) {
     labs(x = "Day of the week", y = "Share of unique devices (%)", title = lb2plot) +
     theme(strip.background = element_blank())
 
-  ggsave(filename = paste0("figures/visits_day_desc/device_share_", lb2plot, ".png"),
+  ggsave(filename = paste0("figures/visits_day_desc/sg_device_share_", lb2plot, ".png"),
          plot=g3, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
 
@@ -186,6 +186,7 @@ for (lb2plot in lbs.top) {
   ggsave(filename = paste0("figures/visits_day_desc/22_23_device_share_", lb2plot, ".png"),
          plot=g3, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
+
 # ---- Distance from home by year, month, weekday, and label (30, weighted) ----
 # Top 24 types of locations
 lbs.top <- lbs[1:24]
@@ -219,7 +220,7 @@ for (lb2plot in lbs.top) {
     labs(x = "Day of the week", y = "Distance from home (weighted, km)", title = lb2plot) +
     theme(strip.background = element_blank())
 
-  ggsave(filename = paste0("figures/visits_day_desc/d2h_", lb2plot, ".png"),
+  ggsave(filename = paste0("figures/visits_day_desc/sg_d2h_", lb2plot, ".png"),
          plot=g4, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
 
@@ -236,14 +237,15 @@ for (lb2plot in lbs.top) {
     labs(x = "Day of the week", y = "Distance from home (weighted, km)", title = lb2plot) +
     theme(strip.background = element_blank())
 
-  ggsave(filename = paste0("figures/visits_day_desc/22_23_d2h_", lb2plot, ".png"),
+  ggsave(filename = paste0("figures/visits_day_desc/2223_d2h_", lb2plot, ".png"),
          plot=g3, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
 
 # ---- Delta values based on POIs above 30 visits ----
-lbs.top <- lbs[1:24]
+# lbs.top <- lbs[1:24]
+lbs.top <- c('Restaurant', 'Supermarket', 'Recreation & Sports Centres', 'Retail stores')
 df.device <- df %>%
-  filter(var == 'visits_share_dd') %>%
+  filter(var == 'num_visits_dd') %>%
   mutate(lower = q50_est-q50_se) %>%
   mutate(upper = q50_est+q50_se) %>%
   filter(label %in% lbs.top)
@@ -257,7 +259,7 @@ df.device$weekday <- factor(df.device$weekday,
                                      'Sat', 'Sun'))
 
 df.dh <- df %>%
-  filter(var == 'd_ha_wt_dd') %>%
+  filter(var == 'd_ha_dd') %>%
   mutate(lower = q50_est-q50_se) %>%
   mutate(upper = q50_est+q50_se) %>%
   filter(label %in% lbs.top)
@@ -278,7 +280,7 @@ for (lb2plot in lbs.top) {
     geom_hline(aes(yintercept = 0), color='gray', linewidth=1) +
     labs(title = lb2plot,
          x = 'Day of the week',
-         y = 'Device share change (%)') +
+         y = 'No. of visits change') +
     theme(strip.background = element_blank())
 
   g7 <- ggplot(data = df.dh[df.dh$label==lb2plot,], aes(x=weekday)) +
@@ -293,6 +295,6 @@ for (lb2plot in lbs.top) {
     theme(strip.background = element_blank())
 
   G1 <- ggarrange(g6, g7, ncol = 2, nrow = 1, labels = c('a', 'b'))
-  ggsave(filename = paste0("figures/visits_day_desc/delta_", lb2plot, ".png"),
+  ggsave(filename = paste0("figures/poi_cases/sg_delta_", lb2plot, ".png"),
            plot=G1, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
