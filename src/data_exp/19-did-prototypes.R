@@ -119,3 +119,6 @@ g3 <- ggplot(data = df, aes(y=place, color=y)) +
 g3
 ggsave(filename = paste0("figures/did/model2.png"),
            plot=g3, width = 10, height = 10, unit = "in", dpi = 300, bg = 'white')
+
+# DiD Model 2 Full 2022 vs. 2023 (Jun-Aug) ----
+df <- as.data.frame(read_parquet('results/did/all_states_model_v5_pt3_pois_6_8.parquet'))

@@ -223,8 +223,8 @@ def df2gdf_point(df, x_field, y_field, crs=4326, drop=True):
     Convert two columns of GPS coordinates into POINT geo dataframe
     :param drop: boolean, if true, x and y columns will be dropped
     :param df: dataframe, containing X and Y
-    :param x_field: string, col name of X
-    :param y_field: string, col name of Y
+    :param x_field: string, col name of X, lng
+    :param y_field: string, col name of Y, lat
     :param crs: int, epsg code
     :return: a geo dataframe with geometry of POINT
     """
