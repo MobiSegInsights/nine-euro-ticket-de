@@ -11,6 +11,7 @@ from geopandas import GeoDataFrame
 from shapely.geometry import Point
 from math import radians, cos, sin, asin, sqrt
 from timezonefinder import TimezoneFinder
+from shapely.geometry import Polygon
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -21,6 +22,17 @@ with open(os.path.join(ROOT_dir, 'dbs', 'keys.yaml')) as f:
 
 
 de_box = (5.98865807458, 47.3024876979, 15.0169958839, 54.983104153)
+
+
+# Function to create a 100m x 100m square polygon
+def create_square(x, y, size=100):
+    half_size = size / 2
+    return Polygon([
+        (x - half_size, y - half_size),
+        (x + half_size, y - half_size),
+        (x + half_size, y + half_size),
+        (x - half_size, y + half_size)
+    ])
 
 
 def bootstrap_median_and_error(df, target_col, weight_col, n_bootstrap=1000):

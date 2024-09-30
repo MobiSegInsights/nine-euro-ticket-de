@@ -170,22 +170,22 @@ for (lb2plot in lbs.top) {
          plot=g4, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
 }
 
-# Exclude 2019 data
-for (lb2plot in lbs.top) {
-  g3 <- ggplot(data = df2plot[(df2plot$label==lb2plot) & (df2plot$year != 2019),],
-               aes(y=device_share, x=weekday, color=as.factor(year), group=as.factor(year))) +
-    theme_hc() +
-    geom_line(alpha=0.3) +
-    geom_point(alpha=0.3) +
-    geom_line(aes(y=device_share_a, x=weekday, color=as.factor(year), group=as.factor(year))) +
-    scale_color_discrete(name='Year') +
-    facet_grid(.~month) +
-    labs(x = "Day of the week", y = "Share of unique devices (%)", title = lb2plot) +
-    theme(strip.background = element_blank())
-
-  ggsave(filename = paste0("figures/visits_day_desc/22_23_device_share_", lb2plot, ".png"),
-         plot=g3, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
-}
+# # Exclude 2019 data
+# for (lb2plot in lbs.top) {
+#   g3 <- ggplot(data = df2plot[(df2plot$label==lb2plot) & (df2plot$year != 2019),],
+#                aes(y=device_share, x=weekday, color=as.factor(year), group=as.factor(year))) +
+#     theme_hc() +
+#     geom_line(alpha=0.3) +
+#     geom_point(alpha=0.3) +
+#     geom_line(aes(y=device_share_a, x=weekday, color=as.factor(year), group=as.factor(year))) +
+#     scale_color_discrete(name='Year') +
+#     facet_grid(.~month) +
+#     labs(x = "Day of the week", y = "Share of unique devices (%)", title = lb2plot) +
+#     theme(strip.background = element_blank())
+#
+#   ggsave(filename = paste0("figures/visits_day_desc/22_23_device_share_", lb2plot, ".png"),
+#          plot=g3, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
+# }
 
 # ---- Distance from home by year, month, weekday, and label (30, weighted) ----
 # Top 24 types of locations

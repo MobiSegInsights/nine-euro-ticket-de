@@ -40,9 +40,10 @@ class VisitationDayDataPrep:
     def load_weight(self):
         engine = sqlalchemy.create_engine(
             f'postgresql://{self.user}:{self.password}@localhost:{self.port}/{self.db_name}?gssencmode=disable')
-        self.home = pd.merge(pd.read_sql("""SELECT * FROM weight_rg;""", con=engine),
-                             pd.read_sql("""SELECT device_aid, latitude, longitude FROM home_r;""", con=engine),
-                             on='device_aid', how='left')
+        # self.home = pd.merge(pd.read_sql("""SELECT * FROM weight_rg;""", con=engine),
+        #                      pd.read_sql("""SELECT device_aid, latitude, longitude FROM home_r;""", con=engine),
+        #                      on='device_aid', how='left')
+        self.home = pd.read_sql("""SELECT device_aid, latitude, longitude FROM home_r;""", con=engine)
         self.home.rename(columns={'latitude': 'lat_h', 'longitude': 'lng_h'}, inplace=True)
 
     def process_and_save(self, batch=None, cols=None):
