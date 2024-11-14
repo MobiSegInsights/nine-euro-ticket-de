@@ -102,6 +102,12 @@ class TimeProcessing:
         self.data.loc[:, 'de_time'] = self.data.\
             progress_apply(lambda row: within_de_time(row['latitude'], row['longitude']), axis=1)
         print("Share of data in Germany time: %.2f %%" % (self.data.loc[:, 'de_time'].sum() / len(self.data) * 100))
+        # Focus on Germany, skipping functions of time_zone_parallel and convert_to_local_time
+        self.data = self.data.loc[self.data['de_time'] == 1, :]
+        k = 'Europe/Berlin'
+        self.data = self.data.drop(columns=['de_time'])
+        self.data.loc[:, "localtime"] = self.data['datetime'].dt.tz_localize('UTC').dt.tz_convert(k)
+        print('Time processed done.')
 
     def time_zone_parallel(self):
         df_sub = self.data.loc[self.data.de_time == 0, :].copy()
@@ -144,18 +150,20 @@ class TimeProcessing:
         # Add start time hour and duration in minute
         self.data['localtime'] = pd.to_datetime(self.data['localtime'], errors='coerce')
         self.data.loc[:, 'hour'] = self.data.loc[:, 'localtime'].dt.hour
+        self.data.loc[:, 'month'] = self.data.loc[:, 'localtime'].dt.month
+        self.data.loc[:, 'year'] = self.data.loc[:, 'localtime'].dt.year
         self.data.loc[:, 'weekday'] = self.data.loc[:, 'localtime'].dt.dayofweek
         self.data.loc[:, 'week'] = self.data.loc[:, 'localtime'].dt.isocalendar().week
         self.data.loc[:, 'date'] = self.data.loc[:, 'localtime'].dt.date
         # Add individual sequence index
         self.data = self.data.sort_values(by=['device_aid', 'timestamp'], ascending=True)
-
-        def indi_seq(df):
-            df.loc[:, 'seq'] = range(1, len(df) + 1)
-            return df
-
-        reslt = p_map(indi_seq, [g for _, g in self.data.groupby('device_aid', group_keys=True)])
-        self.data = pd.concat(reslt)
+        #
+        # def indi_seq(df):
+        #     df.loc[:, 'seq'] = range(1, len(df) + 1)
+        #     return df
+        #
+        # reslt = p_map(indi_seq, [g for _, g in self.data.groupby('device_aid', group_keys=True)])
+        # self.data = pd.concat(reslt)
 
 
 class TimeProcessingStops:

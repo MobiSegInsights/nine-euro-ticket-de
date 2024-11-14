@@ -21,7 +21,7 @@ def by_batch(data):
             return [res[0], res[1]]
         except:
             return [np.nan, np.nan]
-    data[['utm_x', 'utm_y']] = data.apply(utm_converter, axis=1, result_type ='expand')
+    data[['utm_x', 'utm_y']] = data.apply(utm_converter, axis=1, result_type='expand')
     return data
 
 
@@ -31,8 +31,8 @@ class DataPrep:
         :return: None
         :rtype: None
         """
-        self.raw_data_folder = 'E:\\raw_data_de'  # under the local drive D
-        self.converted_data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet'
+        self.raw_data_folder = 'E:\\MAD_dbs\\raw_data_de_2'  # under the local drive D
+        self.converted_data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_b'
         self.data = None
         self.devices = None
 
@@ -44,7 +44,8 @@ class DataPrep:
             days_list.remove('14')
         for day in days_list:
             df_list = []
-            path = os.path.join(self.raw_data_folder, f'raw_data_de_{y}', m, day)
+            # path = os.path.join(self.raw_data_folder, f'raw_data_de_{y}', m, day)
+            path = os.path.join(self.raw_data_folder, f'{y}', m, day)
             file_list = os.listdir(path)
             for file in file_list:
                 file_path = os.path.join(path, file)
@@ -93,7 +94,8 @@ class DataPrep:
         """
         start = time.time()
         print("Data loading...")
-        path = os.path.join(self.raw_data_folder, f'raw_data_de_{year}', month, day)
+        # path = os.path.join(self.raw_data_folder, f'raw_data_de_{year}', month, day)
+        path = os.path.join(self.raw_data_folder, f'{year}', month, day)
         file_list = os.listdir(path)
         n = int(len(file_list) / 2)
         file_list_tuple = (file_list[:n], file_list[n:])
@@ -106,14 +108,14 @@ class DataPrep:
                 df_list.append(pd.read_csv(file_path, sep='\t', compression='gzip', usecols=selectedcols))
             temp_ = pd.concat(df_list)
             del df_list
-            np.random.seed(68)
-            temp_.loc[:, 'batch'] = np.random.randint(0, 16, size=len(temp_))
-            # Process coordinates
-            print('Process coordinates...')
-            rstl = p_map(by_batch, [g for _, g in temp_.groupby('batch', group_keys=True)])
-            temp_ = pd.concat(rstl)
-            del rstl
-            temp_.drop(columns=['batch'], inplace=True)
+            # # Process coordinates (dropped for the second batch)
+            # np.random.seed(68)
+            # temp_.loc[:, 'batch'] = np.random.randint(0, 16, size=len(temp_))
+            # print('Process coordinates...')
+            # rstl = p_map(by_batch, [g for _, g in temp_.groupby('batch', group_keys=True)])
+            # temp_ = pd.concat(rstl)
+            # del rstl
+            # temp_.drop(columns=['batch'], inplace=True)
             print('Adding group id to device_aids...')
             temp_ = pd.merge(temp_, self.devices[['device_aid', 'grp']],
                              on='device_aid', how='left')
@@ -123,11 +125,10 @@ class DataPrep:
         print(f"Data processed in {(end - start)/60} minutes.")
 
     def write_out(self, year=None, month=None, day=None):
-        dirs = [x[0] for x in os.walk(self.converted_data_folder)]
-
         def write_data(data=None, hf=None):
+            dirs = [x[0] for x in os.walk(self.converted_data_folder)]
             grp = data.name
-            target_dir = os.path.join(self.converted_data_folder, 'grp_' + str(grp))
+            target_dir = os.path.join(self.converted_data_folder, 'grp_' + str(int(grp)))
             if target_dir not in dirs:
                 os.makedirs(target_dir)
                 print("created folder : ", target_dir)
@@ -236,7 +237,9 @@ class DataPrep:
 
 
 def get_day_list(month=None):
-    days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
+    days_num = {'02': 28, '03': 31, '04': 30,
+                '05': 31, '06': 30, '07': 31,
+                '08': 31, '09': 30}
     days = ["%02d" % (number,) for number in range(1, days_num[month] + 1)]
     return days
 
@@ -246,11 +249,13 @@ if __name__ == '__main__':
     # Stage 2- Processing files
     # Stage 3- Fix problematic day-groups
     # Stage 4- Fix single day for multiple groups
-    stage = 3
+    stage = 2
     if stage == 1:
         print('Processing .csv.gz to log all device ids:')
         data_prep = DataPrep()
-        days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
+        days_num = {'02': 30, '03': 31, '04': 30,
+                    '05': 31, '06': 30, '07': 31,
+                    '08': 31, '09': 30}
         cols = ['timestamp', 'device_aid', 'latitude', 'longitude', 'location_method']
         for y in (2022, 2023):  # 2019,
             for m in ('05', '06', '07', '08', '09'):
@@ -260,21 +265,22 @@ if __name__ == '__main__':
 
     if stage == 2:
         print('Processing .csv.gz into parquet by day:')
-        days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
+        # days_num = {'05': 31, '06': 30, '07': 31, '08': 31, '09': 30}
+        # days_num = {'02': 30, '03': 31, '04': 30}
         cols = ['timestamp', 'device_aid', 'latitude', 'longitude', 'location_method']
         data_prep = DataPrep()
         print('Prepare batches...')
         data_prep.device_grouping(num_groups=300)
         # To start with (2019, '06', '25')
-        trackers = [(x, y) for x in (2019, 2022, 2023) for y in ('05', '06', '07', '08', '09')]
-        for item in [(2019, '05'), (2019, '06'), (2019, '07')]:
+        trackers = [(x, y) for x in (2022, 2023) for y in ('02', '03', '04')]
+        for item in [(2022, '02')]:
             trackers.remove(item)
         for y, m in trackers:
             print(f'Processing year {y} - month {m}:')
             start = time.time()
             days_list = get_day_list(month=m)
-            if (m == '08') & (y == 2019):
-                del days_list[:17]
+            # if (m == '08') & (y == 2019):
+            #     del days_list[:17]
             for day in days_list:
                 data_prep.process_data(selectedcols=cols, year=y, month=m, day=day)
                 data_prep.write_out(year=y, month=m, day=day)

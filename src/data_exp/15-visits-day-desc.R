@@ -14,8 +14,8 @@ library(ggExtra)
 library(ggthemes)
 options(scipen=10000)
 
-df.y <- as.data.frame(read_parquet('results/yearly_poi_visitation_sg.parquet'))
-df.lb <- as.data.frame(read_parquet('results/label_poi_visitation_sg.parquet'))
+df.y <- as.data.frame(read_parquet('results/yearly_combined_poi_visitation_sg.parquet'))
+df.lb <- as.data.frame(read_parquet('results/label_combined_poi_visitation_sg.parquet'))
 df <- as.data.frame(read_parquet('results/label_poi_visitation_delta_sg.parquet'))
 
 # ---------------- No. of unique POIs by year and label ----
@@ -73,7 +73,7 @@ g3 <- ggplot(data = df2plot, aes(y=label, x=num_pop/1000000,
   labs(x = "No. of equivalent visitors (million)", y = "POI type")
 
 G <- ggarrange(g1, g2, g3, ncol = 3, nrow = 1, labels = c('a', 'b', 'c'))
-ggsave(filename = "figures/visits_day_desc/poi_share_year_sg.png", plot=G,
+ggsave(filename = "figures/visits_day_desc/combined_poi_share_year_sg.png", plot=G,
        width = 15, height = 7, unit = "in", dpi = 300, bg = 'white')
 
 # ---- No. of unique devices by year, month, weekday, and label ----
@@ -91,7 +91,7 @@ df2plot$device_share <- df2plot$num_unique_device / df2plot$num_unique_device_a 
 
 # Only check top 24 types of locations
 df2plot <- df2plot[df2plot$label %in% lbs.top,]
-df2plot <- df2plot[df2plot$month < 10,]
+df2plot <- df2plot[df2plot$month < 9,]
 
 # Label month and weekdays
 df2plot$weekday <- factor(df2plot$weekday,
@@ -99,8 +99,8 @@ df2plot$weekday <- factor(df2plot$weekday,
                           labels = c('Mon', 'Tue', 'Wed', 'Thu', 'Fri',
                                      'Sat', 'Sun'))
 df2plot$month <- factor(df2plot$month,
-                          levels = seq(5, 9),
-                          labels = c('May', 'Jun', 'Jul', 'Aug', 'Sep'))
+                          levels = seq(2, 8),
+                          labels = c('Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'))
 df2plot.a <- df2plot %>%
   group_by(year, month, label) %>%
   summarise(device_share_a = mean(device_share))

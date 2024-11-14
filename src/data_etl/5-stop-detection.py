@@ -110,22 +110,36 @@ class StopDetection:
         self.file_paths_dict = None
 
     def file_list(self):
-        # File location and structure
-        data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r'
-        paths = [x[0] for x in os.walk(data_folder)]
-        paths = paths[1:]
+        # # File location and structure
+        # data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r'
+        # paths = [x[0] for x in os.walk(data_folder)]
+        # paths = paths[1:]
+        # self.file_paths_dict = dict()
+        # for path in paths:
+        #     bt = int(path.split('_')[-1])
+        #     files = os.listdir(path)
+        #     file_paths = [os.path.join(path, f) for f in files]
+        #     self.file_paths_dict[bt] = file_paths   # 300 groups of users
+
+        # For combined two time periods
         self.file_paths_dict = dict()
-        for path in paths:
-            bt = int(path.split('_')[-1])
-            files = os.listdir(path)
-            file_paths = [os.path.join(path, f) for f in files]
-            self.file_paths_dict[bt] = file_paths   # 300 groups of users
+        data_folder1 = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r'
+        paths1 = [data_folder1 + f'\\grp_{x}' for x in range(0, 300)]
+        data_folder2 = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_br'
+        paths2 = [data_folder2 + f'\\grp_{x}' for x in range(0, 300)]
+        self.file_paths_dict = dict()
+        for path1, path2, grp in zip(paths1, paths2, range(0, 300)):
+            files1 = os.listdir(path1)
+            file_paths1 = [os.path.join(path1, f) for f in files1]
+            files2 = os.listdir(path2)
+            file_paths2 = [os.path.join(path2, f) for f in files2]
+            self.file_paths_dict[grp] = file_paths1 + file_paths2   # 300 groups of users
 
     def stop_batch(self, batch=None):
         print(f'Processing user group {batch}:')
         start = time.time()
         file_paths = self.file_paths_dict[batch]
-        df = spark.read.parquet(*file_paths). \
+        df = spark.read.parquet(*file_paths).\
             select('device_aid', 'timestamp', 'latitude', 'longitude')
         stops = df.groupby('device_aid').applyInPandas(infostop_per_user, schema=schema)
         stop_locations = stops.groupby('device_aid', 'interval').agg(F.first('loc').alias('loc'),
@@ -138,7 +152,7 @@ class StopDetection:
         df_stops['batch'] = batch
         # Save data to database
         print("Saving data...")
-        df_stops.to_parquet(os.path.join(ROOT_dir, f'dbs/stops/stops_{batch}.parquet'), index=False)
+        df_stops.to_parquet(os.path.join(ROOT_dir, f'dbs/stops_combined/stops_{batch}.parquet'), index=False)
         end = time.time()
         time_elapsed = (end - start) // 60  # in minutes
         print(f"Group {batch} processed and saved in {time_elapsed} minutes.")
@@ -148,5 +162,5 @@ if __name__ == '__main__':
     sd = StopDetection()
     sd.file_list()
     # Batch 0-197 are finished / 64
-    for batch in (64, 204):  # range(0, 300)
+    for batch in range(0, 300):
         sd.stop_batch(batch=batch)

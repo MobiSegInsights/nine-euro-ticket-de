@@ -9,7 +9,7 @@ ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
 sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
-data_folder = 'E:\\MAD_dbs\\raw_data_de\\format_parquet'
+data_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_b'
 paths = [x[0] for x in os.walk(data_folder)]
 paths = paths[1:]
 
@@ -39,8 +39,8 @@ def low_precision_check(x, y):
 class DataFiltering:
     def __init__(self):
         self.paths2raw = {int(x.split('_')[-1]): x for x in paths}
-        self.target_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r'
-        self.target_folder_stats = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_r_stats'
+        self.target_folder = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_br'
+        self.target_folder_stats = 'D:\\MAD_dbs\\raw_data_de\\format_parquet_br_stats'
 
     def low_precision_remove(self, para_set=None):
         batch, file = para_set
@@ -71,7 +71,7 @@ class DataFiltering:
 if __name__ == '__main__':
     dF = DataFiltering()
     # 0-16 are done
-    for batch in (64, 204):    #  range(17, 300):
+    for batch in range(0, 300):    #  range(17, 300):
         dirs = [x[0] for x in os.walk(dF.target_folder)]
         target_dir = os.path.join(dF.target_folder, 'grp_' + str(batch))
         if target_dir not in dirs:
