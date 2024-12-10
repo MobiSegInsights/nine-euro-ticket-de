@@ -17,7 +17,7 @@ g1 <- ggplot(data = pop) +
   scale_y_log10() +
   scale_x_log10() +
   geom_abline(intercept = 0, slope = 1, size=0.3, color='gray45') +
-  labs(y = "Population size", x = "Device count")
+  labs(x = "Population size", y = "Device count")
 
 # Spatial plot ----
 g2 <- ggplot(data = pop) +

@@ -38,11 +38,23 @@ def visit_patterns_hex(data):
                                              weights=data.loc[~data['f_share'].isna(), 'wt_p'])
     else:
         metrics_dict['f_share'] = np.nan
+
     if len(data.loc[~data['grdi'].isna(), :]) > 0:
         metrics_dict['grdi'] = np.average(data.loc[~data['grdi'].isna(), 'grdi'],
                                           weights=data.loc[~data['grdi'].isna(), 'wt_p'])
     else:
         metrics_dict['grdi'] = np.nan
+    if len(data.loc[~data['net_rent_100m'].isna(), :]) > 0:
+        metrics_dict['net_rent_100m'] = np.average(data.loc[~data['net_rent_100m'].isna(), 'net_rent_100m'],
+                                          weights=data.loc[~data['net_rent_100m'].isna(), 'wt_p'])
+    else:
+        metrics_dict['net_rent_100m'] = np.nan
+
+    if len(data.loc[~data['ef'].isna(), :]) > 0:
+        metrics_dict['fuel_price'] = np.average(data.loc[~data['ef'].isna(), 'ef'],
+                                          weights=data.loc[~data['ef'].isna(), 'wt_p'])
+    else:
+        metrics_dict['fuel_price'] = np.nan
 
     ## weighted average
     d, wt = data.loc[data['d_h'] > 0, 'd_h'], data.loc[data['d_h'] > 0, 'wt_p']
@@ -95,7 +107,7 @@ if __name__ == '__main__':
     vc.load_indi()
     for f, i in zip(hex_file_list, range(1, len(hex_file_list) + 1)):
         name = f.split('/')[-1]
-        finished_folder = os.path.join(ROOT_dir, 'dbs/combined_visits_day_did_hex/')
+        finished_folder = os.path.join(ROOT_dir, 'dbs/combined_visits_day_did_hex_r/')
         finished_list = [finished_folder + x for x in list(os.walk(finished_folder))[0][2]]
         finished_list = [x.split('/')[-1] for x in finished_list]
         if name not in finished_list:
@@ -119,17 +131,18 @@ if __name__ == '__main__':
             vc.data.drop(columns=['batch'], inplace=True)
             df_v.loc[:, 'group'] = 'all'
             df_v.loc[:, 'level'] = 'all'
-            del rstl
-            df_v_list = [df_v]
+            #del rstl
+            #df_v_list = [df_v]
 
             # Parallel version
-            grp_list = ['pop_density', 'age', 'net_rent', 'birth_f', 'deprivation']
-            for grp in grp_list:
-                print('Process', grp)
-                df_v_list.append(vc.group_agg_visits(v=grp))
+            #grp_list = ['pop_density', 'age', 'net_rent', 'birth_f', 'deprivation']
+            #for grp in grp_list:
+            #    print('Process', grp)
+            #    df_v_list.append(vc.group_agg_visits(v=grp))
 
-            pd.concat(df_v_list).to_parquet(os.path.join(ROOT_dir, f'dbs/combined_visits_day_did_hex/{name}'))
-            del df_v_list
+            #pd.concat(df_v_list).to_parquet(os.path.join(ROOT_dir, f'dbs/combined_visits_day_did_hex/{name}'))
+            df_v.to_parquet(os.path.join(ROOT_dir, f'dbs/combined_visits_day_did_hex_r/{name}'))
+            del df_v
             end = time.time()
             time_elapsed = (end - start) // 60  # in minutes
             print(f"Group {i} processed and saved in {time_elapsed} minutes.")

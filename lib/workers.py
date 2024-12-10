@@ -12,6 +12,9 @@ from shapely.geometry import Point
 from math import radians, cos, sin, asin, sqrt
 from timezonefinder import TimezoneFinder
 from shapely.geometry import Polygon
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -294,3 +297,36 @@ def haversine_vec(data):
     # Finally Calculate haversine
     d = np.sin(diff_lat / 2) ** 2 + np.cos(lat[:, None]) * np.cos(lat) * np.sin(diff_lng / 2) ** 2
     return 2 * 6371 * np.arcsin(np.sqrt(d))
+
+
+def ticks_q(data, var):
+    ts = [data[var].min(), np.quantile(data[var], 0.25),
+          data[var].median(),
+          np.quantile(data[var], 0.75),
+          data[var].max()]
+    return ts
+
+
+def one_column_distr(data=None, col=None, col_name=None, xticks=None, y_t=None):
+    median_value = data[col].median()
+    sns.set(style="ticks")
+    f, ax = plt.subplots(figsize=(7, 5))
+    sns.despine(f)
+
+    # Create the line plot
+    sns.histplot(
+        data,
+        x=col,
+        edgecolor=".3",
+        linewidth=.5,
+        log_scale=False,
+        stat='proportion'
+    )
+    ax.axvline(median_value, linestyle='--', label='Median=%.2f' % median_value)
+    sns.despine()
+    # Enhance the plot
+    ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
+    ax.set_xticks(xticks)
+    plt.legend(frameon=False)
+    plt.xlabel(col_name)
+    plt.ylabel(f'Fraction of {y_t}')

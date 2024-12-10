@@ -50,11 +50,11 @@ class VisitationDayDataPrep:
         print('Merge home and osm data.')
         data = pd.merge(data, self.home, on='device_aid', how='left')
         tqdm.pandas()
-        data['h3_id'] = data.progress_apply(lambda row: h3.geo_to_h3(row['latitude'], row['longitude'],
-                                                                     resolution=res), axis=1)
+        data['h3_id'] = data.progress_apply(lambda row: h3.latlng_to_cell(row['latitude'], row['longitude'],
+                                                                     res=res), axis=1)
         data.dropna(inplace=True)
         data.loc[:, 'month'] = data.loc[:, 'date'].apply(lambda x: int(str(x).split('-')[1]))
-        data = data.loc[~data['month'].isin([9, 10]), :]
+        data = data.loc[~data['month'].isin([10]), :]
 
         # Distance calculation
         tqdm.pandas(desc='Distance to home')

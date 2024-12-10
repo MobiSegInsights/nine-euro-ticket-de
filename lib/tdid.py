@@ -6,6 +6,7 @@ from pathlib import Path
 os.environ['USE_PYGEOS'] = '0'
 import cvxpy as cp
 from linearmodels.panel import PanelOLS
+from linearmodels.iv import AbsorbingLS
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import warnings
@@ -17,7 +18,7 @@ with open(os.path.join(ROOT_dir, 'dbs', 'keys.yaml')) as f:
     keys_manager = yaml.load(f, Loader=yaml.FullLoader)
 
 
-def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, break_pt=False,
+def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=None,
                      treatment_months=[6, 7, 8], control_months=[5, ], unit='osm', unit_time='time'):
     df = data.copy()
     df = df.loc[df.year.isin(year_list), :]  # .drop_duplicates(subset=['osm_id', 'year', 'month', 'weekday'])
@@ -27,7 +28,8 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, break
     # Categorization
     df['time_fe'] = df['state'].astype(str) + '-' +\
                     df['year'].astype(str) + '-' +\
-                    df['month'].astype(str) # + '-' + df['weekday'].astype(str)
+                    df['month'].astype(str) + '-' +\
+                    df['weekday'].astype(str)
     # Create a state-year and state-month fixed effect
     df['state_month'] = df['state'].astype(str) + '_' + df['month'].astype(str)
     df['state_year'] = df['state'].astype(str) + '_' + df['year'].astype(str)
@@ -36,8 +38,6 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, break
     # Time handling
     df['time'] = pd.to_datetime(df['date'])
     df['dow'] = df['weekday'].astype(int)
-    for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state_month', 'state_year','state_weekday', 'time_fe'):
-        df[var] = df[var].astype('category')
 
     # Treatment
     df['post'] = df['year'] == treatment_yr
@@ -46,15 +46,19 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, break
     df['9et'] = df['month'].isin(treatment_months)
     df['P_m'] = df['9et'] & df['post']  # post x 9ET
 
+    for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state',
+                'state_month', 'state_year', 'state_weekday', 'time_fe','state_holiday'):
+        df[var] = df[var].astype('category')
+
     # Add the dummy variable for treatment (P_m)
-    if break_pt:
+    if grp is not None:
         # Add the dummy variable for treatment (P_m)
-        df['P_m1'] = df['P_m'] & (df['pt_access'] == 'L')
-        df['P_m2'] = df['P_m'] & (df['pt_access'] == 'M')
-        df['P_m3'] = df['P_m'] & (df['pt_access'] == 'H')
-        df['9et1'] = df['9et'] & (df['pt_access'] == 'L')
-        df['9et2'] = df['9et'] & (df['pt_access'] == 'M')
-        df['9et3'] = df['9et'] & (df['pt_access'] == 'H')
+        if grp == 'cluster':
+            num = 5
+        else:
+            num = 4
+        for i in range(1, num + 1):
+            df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
 
     # Set the multiindex
     df = df.set_index([f'{unit}_id', unit_time])
@@ -71,7 +75,8 @@ def data_prep_placebo(data=None, treatment_month=5, policy_t='20220511',
     # Categorization
     df['time_fe'] = df['state'].astype(str) + '-' +\
                     df['year'].astype(str) + '-' +\
-                    df['month'].astype(str) # + '-' + df['weekday'].astype(str)
+                    df['month'].astype(str) + '-' +\
+                    df['weekday'].astype(str)
     # Create a state-year and state-month fixed effect
     df['state_month'] = df['state'].astype(str) + '_' + df['month'].astype(str)
     df['state_year'] = df['state'].astype(str) + '_' + df['year'].astype(str)
@@ -79,7 +84,8 @@ def data_prep_placebo(data=None, treatment_month=5, policy_t='20220511',
     # Time handling
     df['time'] = pd.to_datetime(df['date'])
     df['dow'] = df['weekday'].astype(int)
-    for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state_month', 'state_year', 'state_weekday', 'time_fe'):
+    for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state_month',
+                'state', 'state_year', 'state_weekday', 'time_fe', 'state_holiday'):
         df[var] = df[var].astype('category')
 
     # Treatment
@@ -103,21 +109,21 @@ def time_shifted_did(df=None, target_var='ln_num_visits_wt', time_effect='scienc
     df2m = df.copy()
     # Define formula
     if break_pt:
-        vars = ['P_m1', 'P_m2', 'P_m3', 'rain_m', 'rain', '9et1', '9et2', '9et3', 'gasoline']
+        vars = ['P_m1', 'P_m2', 'P_m3', 'rain_m', 'rain', '9et1', '9et2', '9et3', 'fuel_price']
         if time_effect == 'science':
             formula = f"{target_var} ~ P_m1 + P_m2 + P_m3 + rain_m" + \
-                      " + rain + 9et1 + 9et2 + 9et3 + gasoline + EntityEffects + C(time_fe)"
+                      " + rain + 9et1 + 9et2 + 9et3 + fuel_price + EntityEffects + C(time_fe)"
         else:
             formula = f"{target_var} ~ P_m1 + P_m2 + P_m3 + rain_m" +\
-                      " + rain + 9et1 + 9et2 + 9et3 + gasoline + EntityEffects" +\
-                      " + C(state_year) + C(state_month) + C(weekday)"
+                      " + rain + 9et1 + 9et2 + 9et3 + fuel_price + EntityEffects" +\
+                      " + C(state_holiday) + C(weekday)"  # C(state_year) + C(state_month) + C(weekday)
     else:
-        vars = ['P_m', 'rain_m', 'rain', '9et', 'gasoline']
+        vars = ['P_m', 'rain_m', 'rain', '9et', 'fuel_price']
         if time_effect == 'science':
-            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + gasoline + EntityEffects + C(time_fe)"
+            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + fuel_price + EntityEffects + C(time_fe)"
         else:
-            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + gasoline + EntityEffects" +\
-                      " + C(state_year) + C(state_month) + C(weekday)"
+            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + fuel_price + EntityEffects" +\
+                      " + C(state_holiday) + C(weekday)"
 
     # Model specification
     model = PanelOLS.from_formula(
@@ -140,7 +146,51 @@ def time_shifted_did(df=None, target_var='ln_num_visits_wt', time_effect='scienc
     return result.summary, pd.DataFrame(metrics, columns=['variable', 'coefficient', 'pvalue', 'std_error'])
 
 
-def place_filter_complete(data=None, control_y=None, treatment_y=None):
+def time_shifted_did_absorbing(df=None, target_var='ln_num_visits_wt', time_effect='science',
+                               weight=False, grp=None, drop_month=False, cluster_col='state'):
+    df2m = df.copy()
+    cols = df2m.columns
+    # Define formula
+    if grp is not None:
+        vars = [element for element in cols if (element.startswith("P_m")) & (element != 'P_m')] +\
+               ['rain_m', 'rain', 'fuel_price']
+    else:
+        vars = ['P_m', 'rain_m', 'rain', 'fuel_price']
+
+    if time_effect == 'science':
+        absorb = df2m[['time_fe']]
+    else:
+        if drop_month:
+            absorb = df2m[['weekday', 'state']]  # , 'state_year', 'state'
+        else:
+            absorb = df2m[['weekday', 'state_holiday', 'state_month']]  # 'state_month', 'state_year', 'state'
+
+    dependent = df2m[target_var]
+    exog = df2m[vars]
+
+
+    # Weights (if applicable)
+    weights = df2m['weight'] if weight else None
+
+    # Fit the model
+    model = AbsorbingLS(dependent, exog, absorb=absorb, weights=weights, drop_absorbed=True)
+
+    # Fit the model with clustering
+    clusters = df2m.reset_index()[cluster_col]
+    clusters.index = df2m.index
+    result = model.fit(cov_type='clustered', clusters=clusters)
+
+    # Extract metrics
+    metrics = []
+    for var in vars:
+        if var in result.params.index:
+            metrics.append((var, result.params[var], result.pvalues[var], result.std_errors[var]))
+        else:
+            metrics.append((var, None, None, None))
+    return result, pd.DataFrame(metrics, columns=['variable', 'coefficient', 'pvalue', 'std_error'])
+
+
+def place_filter_complete(data=None, control_y=None, treatment_y=None, unit='h3'):
     def place_stats_ym(data):
         # comp = 8 means being complete
         comp_ym = len(data[['year', 'month']].drop_duplicates())
@@ -148,20 +198,20 @@ def place_filter_complete(data=None, control_y=None, treatment_y=None):
         return pd.Series(dict(comp_ym=comp_ym, comp_y=comp_y))
 
     tqdm.pandas()
-    df_p = data.groupby('osm_id').progress_apply(place_stats_ym).reset_index()
+    df_p = data.groupby(f'{unit}_id').progress_apply(place_stats_ym).reset_index()
 
-    data = data.loc[data.osm_id.isin(df_p.loc[df_p.comp_y == 2, 'osm_id'].values), :]
+    data = data.loc[data[f'{unit}_id'].isin(df_p.loc[df_p.comp_y == 2, f'{unit}_id'].values), :]
 
     # Step 1: Group by 'osm_id', 'year', and 'month' to check for records
-    monthly_presence = data.groupby(['osm_id', 'year', 'month']).size().unstack(fill_value=0)
+    monthly_presence = data.groupby([f'{unit}_id', 'year', 'month']).size().unstack(fill_value=0)
 
     # Step 2: Check for 'osm_id's that have records in both years for the same month
-    osm_ids_meeting_criteria = []
-    for osm_id, row in tqdm(monthly_presence.groupby(level=0), 'The 9ET searching'):
+    ids_meeting_criteria = []
+    for x, row in tqdm(monthly_presence.groupby(level=0), 'The 9ET searching'):
         # Check each month across years for this osm_id
-        if all((row.loc[(osm_id, control_y)] > 0) == (row.loc[(osm_id, treatment_y)] > 0)):
-            osm_ids_meeting_criteria.append(osm_id)
-    data = data.loc[data.osm_id.isin(osm_ids_meeting_criteria), :]
+        if all((row.loc[(x, control_y)] > 0) == (row.loc[(x, treatment_y)] > 0)):
+            ids_meeting_criteria.append(x)
+    data = data.loc[data[f'{unit}_id'].isin(ids_meeting_criteria), :]
     return data
 
 
@@ -272,3 +322,33 @@ def plot_target_var(data=None, var=None, year1=2019, year2=2022):
     plt.tight_layout()
     plt.show()
 
+
+def perform_stratified_permutation(df=None, treatment_col='9et', post_col='post', interaction_col='P_m',
+                                   exog_cols=['P_m', 'rain_m', 'rain', 'fuel_price'],
+                                   absorb_cols=['weekday', 'state_month'], random_seed=0,
+                                   dependent_col=None, cluster_col='state', weights_col=None):
+    df_shuffled = df.copy()
+    if cluster_col == 'Time':
+        df_shuffled['time'] = pd.to_datetime(df_shuffled['date'])
+        df_shuffled['Time'] = df_shuffled['time'].dt.dayofyear
+    # Shuffle treatment within each cluster
+    np.random.seed(random_seed)  # Ensure randomness in each permutation
+    # By state or time - treatment_col or post_col? post_col!
+    df_shuffled[post_col] = df_shuffled.groupby(cluster_col)[post_col].\
+        transform(lambda x: np.random.permutation(x))
+    # By zone-time
+    # df_shuffled[treatment_col] = np.random.permutation(df_shuffled[treatment_col])
+
+    # Recreate interaction term
+    df_shuffled[interaction_col] = df_shuffled[treatment_col] * df_shuffled[post_col]
+    # Define dependent and exogenous variables
+    dependent = df_shuffled[dependent_col]
+    exog = df_shuffled[exog_cols].copy()
+    absorb = df_shuffled[absorb_cols].copy()
+    weights = df_shuffled[weights_col] if weights_col and weights_col in df_shuffled.columns else None
+    # Fit the model
+    model = AbsorbingLS(dependent, exog, absorb=absorb, weights=weights)
+    # Cluster standard errors
+    clusters = df_shuffled[cluster_col] if cluster_col in df_shuffled.columns else None
+    result = model.fit(cov_type='clustered', clusters=clusters)
+    return result.params[interaction_col], result.pvalues[interaction_col]
