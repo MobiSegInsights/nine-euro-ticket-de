@@ -24,9 +24,8 @@ data_folder = 'dbs/combined_did_data/'
 grp, lv = 'all', 'all'
 file1 = data_folder + f'h3_grids_9et_{grp}_{lv}_c.parquet'
 file2 = data_folder + f'h3_grids_dt_{grp}_{lv}_c.parquet'
-cluster_name = {'Tourism-Life cluster': 'q3', 'Sparse activity cluster': 'q1',
-                        'Residential and dining cluster': 'q4', 'High-activity hub': 'q5',
-                        'Tourism-focused sparse cluster': 'q2'}
+cluster_name = {'Balanced mix': 'q3', 'Low-activity area': 'q1',
+                'High-activity hub': 'q4', 'Recreational area': 'q2'}
 
 
 class TimeShiftedDiD:
@@ -59,27 +58,34 @@ class TimeShiftedDiD:
         self.data1.loc[:, 'cluster'] = self.data1.loc[:, 'cluster_name'].map(cluster_name)
         self.data2.loc[:, 'cluster'] = self.data2.loc[:, 'cluster_name'].map(cluster_name)
 
-    def data_prep(self, grp=None, keep_may=True):
+    def data_prep(self, grp=None, keep_may=True, weekday=None):
+        if weekday is not None:
+            wkd = weekday
+        else:
+            wkd = list(range(0, 7))
+        data2use1 = self.data1.loc[self.data1.weekday.isin(wkd), :].copy()
+        data2use2 = self.data2.loc[self.data2.weekday.isin(wkd), :].copy()
+
         if self.policy == 1:
             ylist = [2019, 2022]
             if keep_may:
                 control_months = [5, 9]
             else:
                 control_months = [9,]
-            self.data = tdid.data_preparation(data=self.data1, year_list=ylist, treatment_yr=2022, grp=grp,
+            self.data = tdid.data_preparation(data=data2use1, year_list=ylist, treatment_yr=2022, grp=grp,
                                               treatment_months=[6, 7, 8],
                                               control_months=control_months,
                                               unit='h3', unit_time='time')
         else:
             ylist = [2022, 2023]
-            self.data = tdid.data_preparation(data=self.data2, year_list=ylist, treatment_yr=2023, grp=grp,
+            self.data = tdid.data_preparation(data=data2use2, year_list=ylist, treatment_yr=2023, grp=grp,
                                               treatment_months=[5, ],
                                               control_months=[3, 4],
                                               unit='h3', unit_time='time')
         self.data[f"ln_{self.tvar}"] = np.log(self.data[self.tvar])
 
-    def time_did(self, grp=None, keep_may=True):
-        self.data_prep(grp=grp, keep_may=keep_may)
+    def time_did(self, grp=None, keep_may=True, weekday=None):
+        self.data_prep(grp=grp, keep_may=keep_may, weekday=weekday)
         sum_et_v, res = tdid.time_shifted_did_absorbing(df=self.data, target_var=f"ln_{self.tvar}",
                                                         weight=False, time_effect='jue', grp=grp)
         res.loc[:, 'policy'] = self.policy
@@ -101,30 +107,26 @@ if __name__ == '__main__':
         tsd.add_poi_grps()
         for policy in (1, 2):
             tsd.policy = policy
+            # Main effect
             print('Policy', policy, tvar, 'all')
-            rstl = tsd.time_did()
+            rstl = tsd.time_did(keep_may=False, weekday=None)
             rstl.loc[:, 'grp'] = 'all'
             df_r_list.append(rstl)
-            for grp in ['pt_grp', 'f_grp', 'g_grp', 'r_grp',
-                        "Food and drink_grp", "Leisure_grp", "Life_grp", "Tourism_grp", "Wellness_grp",
-                        'cluster']:
+            # Weekday effect
+            print('Policy', policy, tvar, 'all', 'weekday')
+            rstl = tsd.time_did(keep_may=False, weekday=[0, 1, 2, 3, 4])
+            rstl.loc[:, 'grp'] = 'all_weekday'
+            df_r_list.append(rstl)
+            # Weekday effect
+            print('Policy', policy, tvar, 'all', 'weekend')
+            rstl = tsd.time_did(keep_may=False, weekday=[5, 6])
+            rstl.loc[:, 'grp'] = 'all_weekend'
+            df_r_list.append(rstl)
+            # Heterogeneity effect
+            for grp in ['pt_grp', 'f_grp', 'g_grp', 'r_grp', 'cluster']:
                 print('Policy', policy, tvar, grp)
-                rstl = tsd.time_did(grp=grp)
+                rstl = tsd.time_did(grp=grp, keep_may=False, weekday=None)
                 rstl.loc[:, 'grp'] = grp
                 df_r_list.append(rstl)
-        print('Removing May from the 9ET analysis')
-        policy = 1
-        tsd.policy = policy
-        print('Policy', policy, tvar, 'all_may_removed')
-        rstl = tsd.time_did(keep_may=False)
-        rstl.loc[:, 'grp'] = 'all_may_removed'
-        df_r_list.append(rstl)
-        for grp in ['pt_grp', 'f_grp', 'g_grp', 'r_grp',
-                    "Food and drink_grp", "Leisure_grp", "Life_grp", "Tourism_grp", "Wellness_grp",
-                    'cluster']:
-            print('Policy', policy, tvar, grp)
-            rstl = tsd.time_did(grp=grp, keep_may=False)
-            rstl.loc[:, 'grp'] = grp + '_may_removed'
-            df_r_list.append(rstl)
     df_r = pd.concat(df_r_list)
     df_r.to_csv('results/tdid/model_results.csv', index=False)

@@ -52,11 +52,7 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
 
     # Add the dummy variable for treatment (P_m)
     if grp is not None:
-        # Add the dummy variable for treatment (P_m)
-        if grp == 'cluster':
-            num = 5
-        else:
-            num = 4
+        num = 4
         for i in range(1, num + 1):
             df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
 

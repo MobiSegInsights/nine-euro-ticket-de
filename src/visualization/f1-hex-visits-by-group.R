@@ -45,6 +45,7 @@ v_lines2 <- data.frame(
 
 df.date.9et <- df.date %>%
   filter(policy=='9et') %>%
+  filter(month > 5) %>%
   mutate(policy_status = ifelse(year == 2019, "Baseline (2019)", "Policy (2022)"))
 
 df.date.dt <- df.date %>%
