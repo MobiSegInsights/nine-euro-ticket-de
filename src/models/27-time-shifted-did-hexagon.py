@@ -111,22 +111,26 @@ if __name__ == '__main__':
             print('Policy', policy, tvar, 'all')
             rstl = tsd.time_did(keep_may=False, weekday=None)
             rstl.loc[:, 'grp'] = 'all'
+            print(rstl)
             df_r_list.append(rstl)
             # Weekday effect
             print('Policy', policy, tvar, 'all', 'weekday')
             rstl = tsd.time_did(keep_may=False, weekday=[0, 1, 2, 3, 4])
             rstl.loc[:, 'grp'] = 'all_weekday'
+            print(rstl)
             df_r_list.append(rstl)
             # Weekday effect
             print('Policy', policy, tvar, 'all', 'weekend')
             rstl = tsd.time_did(keep_may=False, weekday=[5, 6])
             rstl.loc[:, 'grp'] = 'all_weekend'
+            print(rstl)
             df_r_list.append(rstl)
             # Heterogeneity effect
-            for grp in ['pt_grp', 'f_grp', 'g_grp', 'r_grp', 'cluster']:
+            for grp in ['pt_grp', 'f_grp', 'r_grp', 'cluster']:
                 print('Policy', policy, tvar, grp)
                 rstl = tsd.time_did(grp=grp, keep_may=False, weekday=None)
                 rstl.loc[:, 'grp'] = grp
+                print(rstl)
                 df_r_list.append(rstl)
     df_r = pd.concat(df_r_list)
     df_r.to_csv('results/tdid/model_results.csv', index=False)

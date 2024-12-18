@@ -44,7 +44,7 @@ class Permute:
             #                                   unit='h3', unit_time='time')
             self.data = tdid.data_preparation(data=self.data1, year_list=ylist, treatment_yr=2022,
                                               treatment_months=[6, 7, 8],
-                                              control_months=[5,9],
+                                              control_months=[9,],
                                               unit='h3', unit_time='time')
         else:
             ylist = [2022, 2023]
@@ -69,7 +69,7 @@ class Permute:
                                                    post_col='post',
                                                    interaction_col='P_m',
                                                    exog_cols=['P_m', 'rain_m', 'rain', 'fuel_price'],
-                                                   absorb_cols=['weekday', 'state_holiday', 'state_month'],
+                                                   absorb_cols=['weekday', 'state_holiday', 'state_month', 'state_year'],
                                                    random_seed=random_seed,
                                                    dependent_col=f"ln_{self.tvar}",
                                                    cluster_col='state',

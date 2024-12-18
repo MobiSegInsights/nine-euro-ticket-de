@@ -11,11 +11,8 @@ library(ggthemes)
 library(shadowtext)
 options(scipen=10000)
 
-# 'age', 'all', 'birth_f', 'deprivation', 'net_rent', 'pop_density'
 gp <- 'all'
 lv <- 'all'
-# df.date <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '.parquet'))) %>%
-#   filter(level==lv)
 df.date <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '_', lv, '.parquet')))
 # Create a new column with month and day only
 df.date$date <- as.Date(df.date$date)
@@ -28,193 +25,116 @@ v_lines2 <- data.frame(
   xintercept = c('05-02', '05-02'),
   year = c(2023, 2023)
 )
-# Add 'policy' column based on conditions
-# df.date.9et <- df.date %>%
-#   mutate(policy = case_when(
-#     (year %in% c(2019, 2022) & month %in% c(5, 6, 7, 8)) ~ "9et",
-#     TRUE ~ "other"
-#   )) %>%
-#   filter(policy=='9et')
-#
-# df.date.dt <- df.date %>%
-#   mutate(policy = case_when(
-#     (year %in% c(2022, 2023) & month %in% c(2, 3, 4, 5)) ~ "dt",
-#     TRUE ~ "other"
-#   )) %>%
-#   filter(policy=='dt')
 
 df.date.9et <- df.date %>%
   filter(policy=='9et') %>%
   filter(month > 5) %>%
-  mutate(policy_status = ifelse(year == 2019, "Baseline (2019)", "Policy (2022)"))
+  mutate(policy_status = ifelse(year == 2019, "Control (2019)", "Treatment (2022)")) %>%
+  mutate(fare_reduction = ifelse((year == 2022) & (month %in% c(6,7,8)),
+                     "w/ fare reduction", "w/o fare reduction"))
 
 df.date.dt <- df.date %>%
   filter(policy=='dt') %>%
   filter(month > 2) %>%
-  mutate(policy_status = ifelse(year == 2022, "Baseline (2022)", "Policy (2023)"))
+  mutate(policy_status = ifelse(year == 2022, "Control (2022)", "Treatment (2023)")) %>%
+  mutate(fare_reduction = ifelse((year == 2023) & (month == 5),
+                   "w/ fare reduction", "w/o fare reduction"))
 
 # Main text ----
-g1 <- ggplot(data = df.date.9et,
-              aes(x = month_day, y = visit_50,
-                  group=policy_status, color = policy_status)) +
-  annotate("rect", xmin = '06-01', xmax = '09-01',
+time.series.plot <- function(data, policy, var, yl1, yl2){
+  if (policy == '9et'){
+    xm <- '06-01'
+    xma <- '09-01'
+    linet <- c("Control (2019)" = "dashed", "Treatment (2022)" = "solid")
+  } else {
+    xm <- '05-02'
+    xma <- '05-31'
+    linet <- c("Control (2022)" = "dashed", "Treatment (2023)" = "solid")
+  }
+  if (var=='visit'){
+    y2plot <- 'visit_50'
+    ylb <- 'No. of visits'
+  } else {
+    y2plot <- 'd_50'
+    ylb <- "Distance from home (km)"
+  }
+  g1 <- ggplot(data = data,
+              aes_string(x = 'month_day', y = y2plot, group='policy_status')) +
+  annotate("rect", xmin = xm, xmax = xma,
            ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue") +
   theme_hc() +
-  geom_line(size=0.7, alpha=1) +
-  scale_color_jama(name='Policy status') +
-#  geom_vline(data = v_lines1, aes(xintercept = xintercept),
-#         linetype = "dashed", color = "blue", size=0.5, alpha=0.1) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "No. of visits") +
-  ylim(16, 103) +
+  geom_line(aes_string(linetype = 'policy_status'), size=0.7, alpha=1, color='#402106') +
+  scale_linetype_manual(name='Group',
+                        values = linet) +
+  geom_line(data = data[data$fare_reduction == "w/ fare reduction", ],
+            aes_string(x = 'month_day', y = y2plot, group='policy_status'),
+            color='#d87414', size=0.7, alpha=1, linetype='solid', inherit.aes = FALSE) +
+  labs(x = "Date", y = ylb) +
+  ylim(yl1, yl2) +
   scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
                               "05-02", "06-01", "07-01",
                               "08-01", "09-01"),
   labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
   theme(panel.grid = element_blank(), strip.background = element_blank())
+  return(g1)
+}
 
-g2 <- ggplot(data = df.date.dt,
-              aes(x = month_day, y = visit_50,
-                  group=policy_status, color = policy_status)) +
-  annotate("rect", xmin = '05-02', xmax = '05-31',
-         ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue") +
-  theme_hc() +
-  geom_line(size=0.7, alpha=1) +
-  scale_color_jama(name='Policy status') +
-#  geom_vline(data = v_lines2, aes(xintercept = xintercept),
-#         linetype = "dashed", color = "gray", size=0.5) +
-  ylim(30, 80) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "No. of visits") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01", "09-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
 
-g3 <- ggplot(data = df.date.9et,
-              aes(x = month_day, y = d_50,
-                  group=policy_status, color = policy_status)) +
-  annotate("rect", xmin = '06-01', xmax = '09-01',
-         ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue") +
-  theme_hc() +
-  geom_line(size=0.7, alpha=1) +
-  scale_color_jama(name='Policy status') +
-#  geom_vline(data = v_lines1, aes(xintercept = xintercept),
-#         linetype = "dashed", color = "gray", size=0.5) +
-  ylim(4, 13) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "Distance from home (km)") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01", "09-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
+# DOW results
+df.dow <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '_', lv, '_dow.parquet')))
+df.dow$weekday <- factor(df.dow$weekday, levels=seq(0, 6),
+                            labels=c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'))
 
-g4 <- ggplot(data = df.date.dt,
-              aes(x = month_day, y = d_50,
-                  group=policy_status, color = policy_status)) +
-  annotate("rect", xmin = '05-02', xmax = '05-31',
-       ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue") +
-  theme_hc() +
-  geom_line(size=0.7, alpha=1) +
-  scale_color_jama(name='Policy status') +
-#  geom_vline(data = v_lines2, aes(xintercept = xintercept),
-#         linetype = "dashed", color = "gray", size=0.5) +
-  ylim(4, 18.5) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "Distance from home (km)") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01", "09-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
+df.dow.9et <- df.dow %>%
+  filter(policy=='9et') %>%
+  mutate(policy_status = ifelse(year == 2019, "Control (2019)", "Treatment (2022)"))
 
-G <- ggarrange(g1, g2, g3, g4, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'))
+df.dow.dt <- df.dow %>%
+  filter(policy=='dt') %>%
+  mutate(policy_status = ifelse(year == 2022, "Control (2022)", "Treatment (2023)"))
+
+time.series.dow.plot <- function(data, var, policy){
+  if (policy == '9et'){
+    brks <- c('Jun-Aug', 'Sep')
+    cvalues <- c('blue', '#402106')
+  } else {
+    brks <- c('Mar-Apr', 'May')
+    cvalues <- c('#402106', 'blue')
+  }
+  if (var=='visit'){
+    y2plot <- 'visit'
+    ylb <- 'No. of visits'
+  } else {
+    y2plot <- 'd'
+    ylb <- "Distance from home (km)"
+  }
+  g0 <- ggplot(data = data, aes_string(x='weekday', color='policy_m')) +
+    theme_hc() +
+    geom_errorbar(aes_string(ymin=paste0(y2plot, '_25'), ymax=paste0(y2plot, '_75')),
+                  width=0.3, linewidth=0.5,
+                  position = position_dodge(.7), show.legend = T) +
+    geom_point(aes_string(y=paste0(y2plot, '_50')), position = position_dodge(.7),
+               size=1.3, show.legend = T) +
+    facet_wrap(.~policy_status, ncol = 2) +
+    scale_color_manual(name='Time', breaks = brks, values = cvalues) +
+    labs(x = "", y = ylb) +
+    theme(strip.background = element_blank())
+  return(g0)
+}
+
+g1 <- time.series.plot(data=df.date.9et, policy='9et', var='visit', yl1=16, yl2=103)
+g11 <- time.series.dow.plot(data=df.dow.9et, var='visit', policy = '9et')
+g2 <- time.series.plot(data=df.date.dt, policy='dt', var='visit', yl1=30, yl2=80)
+g21 <- time.series.dow.plot(data=df.dow.dt, var='visit', policy = 'dt')
+g3 <- time.series.plot(data=df.date.9et, policy='9et', var='distance', yl1=4, yl2=13)
+g31 <- time.series.dow.plot(data=df.dow.9et, var='distance', policy = '9et')
+g4 <- time.series.plot(data=df.date.dt, policy='dt', var='distance', yl1=4, yl2=18.5)
+g41 <- time.series.dow.plot(data=df.dow.dt, var='distance', policy = 'dt')
+G <- ggarrange(g1, g11,
+               g2, g21,
+               g3, g31,
+               g4, g41,
+               ncol = 2, nrow = 4, labels = c('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'))
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
-       plot=G, width = 12, height = 7, unit = "in", dpi = 300, bg = 'white')
+       plot=G, width = 13, height = 14, unit = "in", dpi = 300, bg = 'white')
 
-# Appendix ----
-g31 <- ggplot(data = df.date.9et,
-              aes(x = month_day, y = visit_50, group=as.factor(year))) +
-  theme_hc() +
-  geom_line(size=0.5) +
-  geom_ribbon(aes(ymin = visit_25, ymax = visit_75), alpha = 0.2, fill='gray') +
-  stat_smooth(
-  color = "#ffa801", fill = "#ffa801",
-  method = "loess"
-  ) +
-  geom_vline(data = v_lines1, aes(xintercept = xintercept),
-         linetype = "dashed", color = "#ffa801", size=1) +
-  facet_wrap(~year) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "No. of visits") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01", "09-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
-
-g32 <- ggplot(data = df.date.9et,
-              aes(x = month_day, y = d_50, group=as.factor(year))) +
-  theme_hc() +
-  geom_line(size=0.5) +
-  geom_ribbon(aes(ymin = d_25, ymax = d_75), alpha = 0.2, fill='gray') +
-  stat_smooth(
-  color = "#ffa801", fill = "#ffa801",
-  method = "loess"
-  ) +
-  geom_vline(data = v_lines1, aes(xintercept = xintercept),
-         linetype = "dashed", color = "#ffa801", size=1) +
-  facet_wrap(~year) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "Distance from home (km)") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01", "09-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
-
-g33 <- ggplot(data = df.date.dt,
-              aes(x = month_day, y = visit_50, group=as.factor(year))) +
-  theme_hc() +
-  geom_line(size=0.5) +
-  geom_ribbon(aes(ymin = visit_25, ymax = visit_75), alpha = 0.2, fill='gray') +
-  stat_smooth(
-  color = "#0fbcf9", fill = "#0fbcf9",
-  method = "loess"
-  ) +
-  geom_vline(data = v_lines2, aes(xintercept = xintercept),
-         linetype = "dashed", color = "#0fbcf9", size=1) +
-  facet_wrap(~year) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "No. of visits") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
-
-g34 <- ggplot(data = df.date.dt,
-              aes(x = month_day, y = d_50, group=as.factor(year))) +
-  theme_hc() +
-  geom_line(size=0.5) +
-  geom_ribbon(aes(ymin = d_25, ymax = d_75), alpha = 0.2, fill='gray') +
-  stat_smooth(
-  color = "#0fbcf9", fill = "#0fbcf9",
-  method = "loess"
-  ) +
-  geom_vline(data = v_lines2, aes(xintercept = xintercept),
-         linetype = "dashed", color = "#0fbcf9", size=1) +
-  facet_wrap(~year) +
-  # Labels and theme adjustments
-  labs(x = "Date", y = "Distance from home (km)") +
-  scale_x_discrete(breaks = c("02-01", "03-01", "04-01",
-                              "05-02", "06-01", "07-01",
-                              "08-01"),
-  labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug")) +  # Adjust x-axis labels if needed
-  theme(panel.grid = element_blank(), strip.background = element_blank())
-
-G3 <- ggarrange(g31, g33, g32, g34, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'))
-ggsave(filename = paste0("figures/manuscript/hex_distance_time_series_", gp, '_', lv, ".png"),
-       plot=G3, width = 12, height = 7, unit = "in", dpi = 300, bg = 'white')
