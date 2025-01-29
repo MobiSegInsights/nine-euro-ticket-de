@@ -7,6 +7,7 @@ os.environ['USE_PYGEOS'] = '0'
 import cvxpy as cp
 from linearmodels.panel import PanelOLS
 from linearmodels.iv import AbsorbingLS
+from linearmodels import OLS
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import warnings
@@ -61,27 +62,18 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
     return df
 
 
-def data_prep_placebo(data=None, treatment_month=5, policy_t='20220511',
-                      treatment_yr=2022, control_months=[5, ], p_9et=True, unit='osm', unit_time='time'):
+def data_prep_placebo(data=None, treatment_month=4, policy_t='20230401',
+                      treatment_yr=2023, control_months=[3, ], unit='h3', unit_time='time'):
     df = data.copy()
-    if p_9et:
-        df = df.loc[df['month'] == treatment_month, :]
-    else:
-        df = df.loc[df['month'].isin(control_months + [treatment_month]), :]
-    # Categorization
-    df['time_fe'] = df['state'].astype(str) + '-' +\
-                    df['year'].astype(str) + '-' +\
-                    df['month'].astype(str) + '-' +\
-                    df['weekday'].astype(str)
+    df = df.loc[df['month'].isin(control_months + [treatment_month]), :]
     # Create a state-year and state-month fixed effect
     df['state_month'] = df['state'].astype(str) + '_' + df['month'].astype(str)
     df['state_year'] = df['state'].astype(str) + '_' + df['year'].astype(str)
-    df['state_weekday'] = df['state'].astype(str) + '_' + df['weekday'].astype(str)
     # Time handling
     df['time'] = pd.to_datetime(df['date'])
     df['dow'] = df['weekday'].astype(int)
     for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state_month',
-                'state', 'state_year', 'state_weekday', 'time_fe', 'state_holiday'):
+                'state', 'state_year', 'state_holiday'):
         df[var] = df[var].astype('category')
 
     # Treatment
@@ -90,7 +82,7 @@ def data_prep_placebo(data=None, treatment_month=5, policy_t='20220511',
 
     df.loc[:, 'date_time'] = pd.to_datetime(df['date'].astype(str), format='%Y-%m-%d')
     x = np.datetime64(pd.to_datetime(policy_t, format='%Y%m%d'))
-    df['9et'] = (df['month'] == treatment_month) & (df['date_time'] >= x)
+    df['9et'] = df['date_time'] >= x
 
     # Add the dummy variable for treatment (P_m)
     df['P_m'] = df['9et'] & df['post']  # post x 9ET
@@ -351,11 +343,11 @@ def perform_stratified_permutation(df=None, treatment_col='9et', post_col='post'
 
 
 def regress_and_get_residuals(df=None, dependent_col=None,
-                              exog_cols=['rain', 'fuel_price', '9et'],
+                              exog_cols=['P_m', 'rain_m', 'rain', 'fuel_price', '9et'],
                               absorb_cols=['weekday', 'state_month', 'state_holiday', 'state_year'],
-                              cluster_col='state', weights_col=None):
+                              cluster_col='state'):
     """
-    Regress the outcome variable to control for time-variant covariates and extract residuals.
+    Regress the outcome variable to control for time-variant co-variates and extract residuals.
     Args:
         df (pd.DataFrame): The input data.
         dependent_col (str): The name of the dependent variable.
@@ -369,13 +361,14 @@ def regress_and_get_residuals(df=None, dependent_col=None,
     dependent = df[dependent_col]
     exog = df[exog_cols]
     absorb = df[absorb_cols]
-    weights = df[weights_col] if weights_col and weights_col in df.columns else None
-
-    # Fit the model
-    model = AbsorbingLS(dependent, exog, absorb=absorb, weights=weights)
 
     # Cluster standard errors
     clusters = df[cluster_col] if cluster_col in df.columns else None
+
+    # Fit the model
+    # model = OLS(dependent, x_set)
+    model = AbsorbingLS(dependent, exog, absorb=absorb, drop_absorbed=True)
+
     result = model.fit(cov_type='clustered', clusters=clusters)
     # Return residuals
     return result.resids
