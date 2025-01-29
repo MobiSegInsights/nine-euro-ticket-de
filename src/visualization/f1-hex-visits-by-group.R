@@ -138,3 +138,6 @@ G <- ggarrange(g1, g11,
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
        plot=G, width = 13, height = 14, unit = "in", dpi = 300, bg = 'white')
 
+G <- ggarrange(g1, g2, g3, g4, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'))
+ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
+       plot=G, width = 13, height = 7, unit = "in", dpi = 300, bg = 'white')
