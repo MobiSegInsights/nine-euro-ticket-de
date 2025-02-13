@@ -34,7 +34,7 @@ blank_space_h <- image_blank(2, image_height, color = "white")
 combined_image <- image_append(c(image4, blank_space_h, image3), stack = F)
 image_write(combined_image, "figures/manuscript/activity_type_cluster_grps_h.png")
 
-# ----- Activity-type cluster -------
+# ----- Population groups -------
 image5 <- read.img(path="figures/manuscript/pop_grps_f_maps_dt.png", lb='a')
 image6 <- read.img(path="figures/manuscript/pop_grps_r_maps_dt.png", lb='b')
 image7 <- read.img(path="figures/manuscript/pop_grps.png", lb='c')

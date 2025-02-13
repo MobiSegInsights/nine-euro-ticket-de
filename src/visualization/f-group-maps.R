@@ -53,7 +53,7 @@ g1 <- ggmap(berlin_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$pt_grp), ], aes(fill=pt_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Berlin') +
-  scale_fill_locuszoom(name='Public transit access group') +
+  scale_fill_locuszoom(name='Public transit group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -71,7 +71,7 @@ g2 <- ggmap(hamburg_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$pt_grp), ], aes(fill=pt_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Hamburg') +
-  scale_fill_locuszoom(name='Public transit access group') +
+  scale_fill_locuszoom(name='Public transit group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -89,7 +89,7 @@ g3 <- ggmap(munich_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$pt_grp), ], aes(fill=pt_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Munich') +
-  scale_fill_locuszoom(name='Public transit access group') +
+  scale_fill_locuszoom(name='Public transit group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -107,7 +107,7 @@ g4 <- ggmap(cologne_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$pt_grp), ], aes(fill=pt_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Cologne') +
-  scale_fill_locuszoom(name='Public transit access group') +
+  scale_fill_locuszoom(name='Public transit group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -207,7 +207,7 @@ g9 <- ggmap(berlin_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$f_grp), ], aes(fill=f_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Berlin') +
-  scale_fill_locuszoom(name='Citizenship group') +
+  scale_fill_locuszoom(name='Foreigner share group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -225,7 +225,7 @@ g10 <- ggmap(hamburg_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$f_grp), ], aes(fill=f_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Hamburg') +
-  scale_fill_locuszoom(name='Activity type group') +
+  scale_fill_locuszoom(name='Foreigner share group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -243,7 +243,7 @@ g11 <- ggmap(munich_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$f_grp), ], aes(fill=f_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Munich') +
-  scale_fill_locuszoom(name='Activity type group') +
+  scale_fill_locuszoom(name='Foreigner share group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -261,7 +261,7 @@ g12 <- ggmap(cologne_basemap) +
   geom_sf(data = gdf2[!is.na(gdf2$f_grp), ], aes(fill=f_grp),
           color = 'white', size=0.05, alpha=0.7, show.legend = T, inherit.aes = FALSE) +
   labs(title = 'Cologne') +
-  scale_fill_locuszoom(name='Activity type group') +
+  scale_fill_locuszoom(name='Foreigner share group') +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",

@@ -19,6 +19,11 @@ df <- as.data.frame(read_parquet('results/stats/raw_records_stats.parquet'))
 df$month <- month.abb[df$month]
 df$month <- factor(df$month, levels = month.abb[2:9], ordered = TRUE)
 
+# only show DT time period
+df <- df %>%
+  filter(year != 2019) %>%
+  filter(month %in% c('Mar', 'Apr', 'May'))
+
 # Plot
 g1 <- ggplot() +
   theme_hc() +
@@ -64,5 +69,6 @@ g2 <- ggplot() +
 
 
 G <- ggarrange(g1, g2, ncol = 2, nrow = 1, labels = c('a', 'b'))
+G
 ggsave(filename = "figures/manuscript/a1_raw_data_stats.png", plot=G,
-       width = 12, height = 4, unit = "in", dpi = 300, bg = 'white')
+       width = 10, height = 3, unit = "in", dpi = 300, bg = 'white')

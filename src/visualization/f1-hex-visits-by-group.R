@@ -64,7 +64,7 @@ time.series.plot <- function(data, policy, var, yl1, yl2){
            ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue") +
   theme_hc() +
   geom_line(aes_string(linetype = 'policy_status'), size=0.7, alpha=1, color='#402106') +
-  scale_linetype_manual(name='Group',
+  scale_linetype_manual(name='Period',
                         values = linet) +
   geom_line(data = data[data$fare_reduction == "w/ fare reduction", ],
             aes_string(x = 'month_day', y = y2plot, group='policy_status'),
@@ -141,3 +141,7 @@ ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".p
 G <- ggarrange(g1, g2, g3, g4, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'))
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
        plot=G, width = 13, height = 7, unit = "in", dpi = 300, bg = 'white')
+
+G <- ggarrange(g2, g4, ncol = 2, nrow = 1, labels = c('a', 'b'), common.legend = T)
+ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
+       plot=G, width = 13, height = 4, unit = "in", dpi = 300, bg = 'white')

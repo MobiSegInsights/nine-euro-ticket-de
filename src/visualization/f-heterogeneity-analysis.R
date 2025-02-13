@@ -17,7 +17,7 @@ library(sf)
 
 options(scipen=10000)
 
-df <- read.csv('results/tdid/model_results.csv')
+df <- read.csv('results/tdid/model_results_r.csv')
 df$pvalue <- round(df$pvalue, 2)
 df <- df %>%
   mutate(sig = case_when(
@@ -46,38 +46,38 @@ df.dow$var <- factor(df.dow$var,
                          levels=c('num_visits_wt', 'd_ha_wt'),
                          labels=c('No. of visits', 'Distance from home'))
 
-g0 <- ggplot(data = df.dow, aes(x=grp)) +
+g0 <- ggplot(data = df.dow[df.dow['policy']==2, ], aes(x=grp)) +
   theme_hc() +
   # geom_vline(aes(xintercept = 0), color='gray', size=0.3, show.legend = F) +
-  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(policy)),
-                width=0.3, linewidth=0.5,
+  geom_errorbar(aes(ymin=lower, ymax=upper),  #, color=as.factor(policy)
+                width=0.1, linewidth=0.5,
                 position = position_dodge(.7), show.legend = T) +
-  geom_point(aes(y=coefficient, color=as.factor(policy)), position = position_dodge(.7),
+  geom_point(aes(y=coefficient), position = position_dodge(.7), #, color=as.factor(policy)
              size=1.3, show.legend = T) +
-  scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
+  # scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
   # Add significance markers
   geom_text(
     aes(
       x = grp,
       y = upper + 0.05,
-      label = sig,
-      color=as.factor(policy)
+      label = sig
     ),
     position = position_dodge(0.7),
     size = 3,
     vjust = 0,
     show.legend = F
-  ) +
+  ) + # color=as.factor(policy)
   facet_wrap(.~var, ncol = 2) +
   labs(x = "", y = "Policy effect (%)") +
   theme(strip.background = element_blank())
 
 ggsave(filename = paste0("figures/manuscript/dow_grps.png"),
-       plot=g0, width = 9, height = 6, unit = "in", dpi = 300, bg = 'white')
+       plot=g0, width = 9, height = 4, unit = "in", dpi = 300, bg = 'white')
 
 # PT access group ----
 df.pt <- df %>%
   filter(grp=='pt_grp') %>%
+  filter(policy==2) %>%
   filter(variable %in% c('P_m1', 'P_m2', 'P_m3', 'P_m4'))
 
 df.pt$var <- factor(df.pt$var,
@@ -91,35 +91,39 @@ df.pt$variable <- factor(df.pt$variable,
 g1 <- ggplot(data = df.pt, aes(x=variable)) +
   theme_hc() +
   # geom_vline(aes(xintercept = 0), color='gray', size=0.3, show.legend = F) +
-  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(policy)),
+  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(var)),  #, color=as.factor(policy)
                 width=0.3, linewidth=0.5,
                 position = position_dodge(.7), show.legend = T) +
-  geom_point(aes(y=coefficient, color=as.factor(policy)), position = position_dodge(.7),
+  geom_point(aes(y=coefficient, color=as.factor(var)), position = position_dodge(.7), #, color=as.factor(policy)
              size=1.3, show.legend = T) +
-  scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
+  scale_color_npg(name='Visitation outcome',
+                  breaks=c('No. of visits', 'Distance from home'),
+                  labels = c('No. of visits', 'Distance from home')) +
+  # scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
   # Add significance markers
   geom_text(
     aes(
       x = variable,
       y = upper + 0.05,
       label = sig,
-      color=as.factor(policy)
+      color=as.factor(var)
     ),
     position = position_dodge(0.7),
     size = 3,
     vjust = 0,
     show.legend = F
-  ) +
-  facet_wrap(.~var, ncol = 2) +
-  labs(x = "Public transit access group", y = "Policy effect (%)") +
+  ) + #color=as.factor(policy)
+  # facet_wrap(.~var, ncol = 2) +
+  labs(x = "Public transit network density group", y = "Policy effect (%)") +
   theme(strip.background = element_blank())
-
+g1
 ggsave(filename = paste0("figures/manuscript/pt_grps.png"),
-       plot=g1, width = 9, height = 6, unit = "in", dpi = 300, bg = 'white')
+       plot=g1, width = 6, height = 6, unit = "in", dpi = 300, bg = 'white')
 
 # Activity type by clusters ----
 df.act.c <- df %>%
   filter(grp %in% c("cluster")) %>%
+  filter(policy==2) %>%
   filter(variable %in% c('P_m1', 'P_m2', 'P_m3', 'P_m4'))
 
 df.act.c$var <- factor(df.act.c$var,
@@ -132,19 +136,21 @@ df.act.c$variable <- factor(df.act.c$variable,
 
 g4 <- ggplot(data = df.act.c, aes(x=variable)) +
   theme_hc() +
-  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(policy)),
+  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(var)),
                 width=0.3, linewidth=0.5,
                 position = position_dodge(.7), show.legend = T) +
-  geom_point(aes(y=coefficient, color=as.factor(policy)), position = position_dodge(.7),
+  geom_point(aes(y=coefficient, color=as.factor(var)), position = position_dodge(.7),
              size=1.3, show.legend = T) +
-  scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
+  scale_color_npg(name='Visitation outcome',
+                breaks=c('No. of visits', 'Distance from home'),
+                labels = c('No. of visits', 'Distance from home')) +
   # Add significance markers
   geom_text(
     aes(
       x = variable,
-      y = upper + 10,
+      y = upper + 1,
       label = sig,
-      color=as.factor(policy)
+      color=as.factor(var)
     ),
     position = position_dodge(0.7),
     size = 3,
@@ -152,16 +158,17 @@ g4 <- ggplot(data = df.act.c, aes(x=variable)) +
     angle = 90,
     show.legend = F
   ) +
-  facet_wrap(.~var, scales="free_x") +
+  # facet_wrap(.~var, scales="free_x") +
   labs(x = "", y = "Policy effect (%)") +
   theme(strip.background = element_blank()) +
   coord_flip()
 ggsave(filename = paste0("figures/manuscript/activity_type_cluster_grps.png"),
-       plot=g4, width = 9, height = 6, unit = "in", dpi = 300, bg = 'white')
+       plot=g4, width = 6, height = 6, unit = "in", dpi = 300, bg = 'white')
 
 # Population groups ----
 df.pop <- df %>%
   filter(grp %in% c("f_grp", "r_grp")) %>%
+  filter(policy == 2) %>%
   filter(variable %in% c('P_m1', 'P_m2', 'P_m3', 'P_m4'))
 
 df.pop$var <- factor(df.pop$var,
@@ -179,26 +186,28 @@ df.pop$grp <- factor(df.pop$grp,
 g3 <- ggplot(data = df.pop, aes(x=variable)) +
   theme_hc() +
   # geom_vline(aes(xintercept = 0), color='gray', size=0.3, show.legend = F) +
-  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(policy)),
+  geom_errorbar(aes(ymin=lower, ymax=upper, color=as.factor(var)),
                 width=0.3, linewidth=0.5,
                 position = position_dodge(.7), show.legend = T) +
-  geom_point(aes(y=coefficient, color=as.factor(policy)), position = position_dodge(.7),
+  geom_point(aes(y=coefficient, color=as.factor(var)), position = position_dodge(.7),
              size=1.3, show.legend = T) +
-  scale_color_npg(name='Policy', breaks=c(1, 2), labels = c('9ET', 'DT')) +
+  scale_color_npg(name='Visitation outcome',
+                breaks=c('No. of visits', 'Distance from home'),
+                labels = c('No. of visits', 'Distance from home')) +
   # Add significance markers
   geom_text(
     aes(
       x = variable,
       y = upper + 0.05,
       label = sig,
-      color=as.factor(policy)
+      color=as.factor(var)
     ),
     position = position_dodge(0.7),
     size = 3,
     vjust = 0,
     show.legend = F
   ) +
-  facet_wrap(grp~var, ncol = 4) +
+  facet_wrap(grp~., ncol = 2) +
   labs(x = "Population quantile group", y = "Policy effect (%)") +
   theme(strip.background = element_blank())
 

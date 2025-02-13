@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(ROOT_dir, 'lib'))
 
 import workers
 
-data_folder = os.path.join(ROOT_dir, 'dbs/stops_p/')
+data_folder = os.path.join(ROOT_dir, 'dbs/stops_combined_p/')
 paths2stops = {int(x.split('_')[-1].split('.')[0]): \
                    os.path.join(data_folder, x) for x in list(os.walk(data_folder))[0][2]}
 

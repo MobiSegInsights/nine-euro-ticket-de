@@ -42,10 +42,14 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
 
     # Treatment
     df['post'] = df['year'] == treatment_yr
-    df['rain'] = df['precipitation'] > 0
-    df['rain_m'] = df['rain'] & df['post']  #
+    df['rain'] = df['precipitation'] # df['precipitation'] > 0
+    # df['rain_m'] = df['rain'] & df['post']  #
     df['9et'] = df['month'].isin(treatment_months)
     df['P_m'] = df['9et'] & df['post']  # post x 9ET
+
+    # Fuel price
+    df['year_t'] = (df['year'] == treatment_yr).astype(int)  # Convert to binary (1 for 2023, 0 for 2022)
+    df['fuel_price_year'] = df['fuel_price'] * df['year_t']  # Interaction term
 
     for var in (f'{unit}_id', 'year', 'month', 'weekday', 'state',
                 'state_month', 'state_year', 'state_weekday', 'time_fe', 'state_holiday'):
@@ -56,7 +60,7 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
         num = 4
         for i in range(1, num + 1):
             df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
-
+    df.loc[:, f'{unit}'] = df.loc[:, f'{unit}_id']
     # Set the multiindex
     df = df.set_index([f'{unit}_id', unit_time])
     return df
@@ -78,7 +82,7 @@ def data_prep_placebo(data=None, treatment_month=4, policy_t='20230401',
 
     # Treatment
     df['post'] = df['year'] == treatment_yr
-    df['rain'] = df['precipitation'] > 0
+    df['rain'] = df['precipitation'] # df['precipitation'] > 0
 
     df.loc[:, 'date_time'] = pd.to_datetime(df['date'].astype(str), format='%Y-%m-%d')
     x = np.datetime64(pd.to_datetime(policy_t, format='%Y%m%d'))
@@ -86,52 +90,16 @@ def data_prep_placebo(data=None, treatment_month=4, policy_t='20230401',
 
     # Add the dummy variable for treatment (P_m)
     df['P_m'] = df['9et'] & df['post']  # post x 9ET
-    df['rain_m'] = df['rain'] & df['post']  #
+    # df['rain_m'] = df['rain'] & df['post']  #
 
+    # Fuel price
+    df['year_t'] = (df['year'] == treatment_yr).astype(int)  # Convert to binary (1 for 2023, 0 for 2022)
+    df['fuel_price_year'] = df['fuel_price'] * df['year_t']  # Interaction term
+
+    df.loc[:, f'{unit}'] = df.loc[:, f'{unit}_id']
     # Set the multiindex
     df = df.set_index([f'{unit}_id', unit_time])
     return df
-
-
-def time_shifted_did(df=None, target_var='ln_num_visits_wt', time_effect='science', weight=False, break_pt=False):
-    df2m = df.copy()
-    # Define formula
-    if break_pt:
-        vars = ['P_m1', 'P_m2', 'P_m3', 'rain_m', 'rain', '9et1', '9et2', '9et3', 'fuel_price']
-        if time_effect == 'science':
-            formula = f"{target_var} ~ P_m1 + P_m2 + P_m3 + rain_m" + \
-                      " + rain + 9et1 + 9et2 + 9et3 + fuel_price + EntityEffects + C(time_fe)"
-        else:
-            formula = f"{target_var} ~ P_m1 + P_m2 + P_m3 + rain_m" +\
-                      " + rain + 9et1 + 9et2 + 9et3 + fuel_price + EntityEffects" +\
-                      " + C(state_holiday) + C(weekday)"  # C(state_year) + C(state_month) + C(weekday)
-    else:
-        vars = ['P_m', 'rain_m', 'rain', '9et', 'fuel_price']
-        if time_effect == 'science':
-            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + fuel_price + EntityEffects + C(time_fe)"
-        else:
-            formula = f"{target_var} ~ P_m + rain_m + rain + 9et + fuel_price + EntityEffects" +\
-                      " + C(state_holiday) + C(weekday)"
-
-    # Model specification
-    model = PanelOLS.from_formula(
-        formula,
-        data=df2m,
-        weights=df2m['weight'] if weight else None,
-        check_rank=False,
-        drop_absorbed=True
-    )
-
-    # Fit the model with clustering
-    clusters = df2m.reset_index()['state']
-    clusters.index = df2m.index
-    result = model.fit(cov_type='clustered', clusters=clusters)
-
-    metrics = []
-    for var in vars:
-        if var in result.params:
-            metrics.append((var, result.params[var], result.pvalues[var], result.std_errors[var]))
-    return result.summary, pd.DataFrame(metrics, columns=['variable', 'coefficient', 'pvalue', 'std_error'])
 
 
 def time_shifted_did_absorbing(df=None, target_var='ln_num_visits_wt', time_effect='science',
@@ -141,17 +109,17 @@ def time_shifted_did_absorbing(df=None, target_var='ln_num_visits_wt', time_effe
     # Define formula
     if grp is not None:
         vars = [element for element in cols if (element.startswith("P_m")) & (element != 'P_m')] +\
-               ['rain_m', 'rain', 'fuel_price']
+               ['rain', 'fuel_price', 'fuel_price_year'] # 'rain_m', 'rain', 'fuel_price'
     else:
-        vars = ['P_m', 'rain_m', 'rain', 'fuel_price']
+        vars = ['P_m', 'rain', 'fuel_price', 'fuel_price_year']  # 'P_m', 'rain_m', 'rain', 'fuel_price'
 
     if time_effect == 'science':
         absorb = df2m[['time_fe']]
     else:
         if drop_month:
-            absorb = df2m[['weekday', 'state']]  # , 'state_year', 'state'
+            absorb = df2m[['weekday', 'state', 'h3']]  # , 'state_year', 'state'
         else:
-            absorb = df2m[['weekday', 'state_year', 'state_holiday', 'state_month']]  # 'state_month', 'state_year', 'state'
+            absorb = df2m[['weekday', 'state_year', 'state_holiday', 'state_month', 'h3']]  # 'state_month', 'state_year', 'state'
     dependent = df2m[target_var]
     exog = df2m[vars]
 
@@ -194,7 +162,7 @@ def place_filter_complete(data=None, control_y=None, treatment_y=None, unit='h3'
 
     # Step 2: Check for 'osm_id's that have records in both years for the same month
     ids_meeting_criteria = []
-    for x, row in tqdm(monthly_presence.groupby(level=0), 'The 9ET searching'):
+    for x, row in tqdm(monthly_presence.groupby(level=0), 'Complete searching'):
         # Check each month across years for this osm_id
         if all((row.loc[(x, control_y)] > 0) == (row.loc[(x, treatment_y)] > 0)):
             ids_meeting_criteria.append(x)
@@ -311,8 +279,8 @@ def plot_target_var(data=None, var=None, year1=2019, year2=2022):
 
 
 def perform_stratified_permutation(df=None, treatment_col='9et', post_col='post', interaction_col='P_m',
-                                   exog_cols=['P_m', 'rain_m', 'rain', 'fuel_price'],
-                                   absorb_cols=['weekday', 'state_month', 'state_holiday', 'state_year'],
+                                   exog_cols=['P_m', 'rain', 'fuel_price', 'fuel_price_year'],
+                                   absorb_cols=['weekday', 'state_month', 'state_holiday', 'state_year', 'h3'],
                                    random_seed=0,
                                    dependent_col=None, cluster_col='state', weights_col=None):
     df_shuffled = df.copy()

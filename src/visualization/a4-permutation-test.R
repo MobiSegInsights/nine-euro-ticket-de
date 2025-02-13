@@ -15,7 +15,7 @@ library(ggthemes)
 library(shadowtext)
 options(scipen=10000)
 
-df <- read.csv('results/tdid/permutation_results_by_state_basic.csv')
+df <- read.csv('results/tdid/permutation_results_by_state_basic_r.csv')
 # Create a named vector for mapping
 mapping <- c("9ET", "DT")
 names(mapping) <- c(1, 2)
@@ -31,7 +31,7 @@ df <- df %>%
 # Manuscript ----
 g <- ggplot(data=df) +
   geom_point(aes(x=coefficient, y=pvalue), size=0.5, alpha=0.6) +
-  facet_wrap(var ~ policy, scales = "free") +
+  facet_wrap(var ~ ., scales = "free") +
   xlim(-0.006, 0.006) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray", size=0.5) +
   theme_hc() +
@@ -42,7 +42,7 @@ g <- ggplot(data=df) +
         panel.grid = element_blank(), strip.background = element_blank())
 
 ggsave(filename = paste0("figures/manuscript/b_permutation_test.png"),
-       plot=g, width = 10, height = 7, unit = "in", dpi = 300, bg = 'white')
+       plot=g, width = 10, height = 4, unit = "in", dpi = 300, bg = 'white')
 
 # Data exploration ----
 h_lines <- data.frame(

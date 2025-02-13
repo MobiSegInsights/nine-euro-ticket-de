@@ -71,7 +71,7 @@ g2 <- ggplot(data = df.date.dt[df.date.dt$var == 'visit',],
                               "08-01", "09-01"),
   labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
   theme(panel.grid = element_blank(), strip.background = element_blank())
-
+g2
 g3 <- ggplot(data = df.date.9et[df.date.9et$var == 'distance',],
               aes(x = month_day, y = res,
                   group=policy_status, linetype = policy_status)) +
@@ -105,7 +105,7 @@ g4 <- ggplot(data = df.date.dt[df.date.dt$var == 'distance',],
                               "08-01", "09-01"),
   labels = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep")) +  # Adjust x-axis labels if needed
   theme(panel.grid = element_blank(), strip.background = element_blank())
-
+g4
 G <- ggarrange(g1, g2, g3, g4, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'))
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, "_res.png"),
        plot=G, width = 12, height = 7, unit = "in", dpi = 300, bg = 'white')

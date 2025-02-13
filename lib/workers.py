@@ -330,3 +330,34 @@ def one_column_distr(data=None, col=None, col_name=None, xticks=None, y_t=None):
     plt.legend(frameon=False)
     plt.xlabel(col_name)
     plt.ylabel(f'Fraction of {y_t}')
+
+
+def long_tail_distr(data=None, col_name=None, x_lb=None, y_lb=None, bin_num=None):
+    print(min(data[col_name]), max(data[col_name]))
+    lower, upper = min(data[col_name]), max(data[col_name])
+    bins = np.logspace(np.log(lower), np.log(upper), bin_num)
+    hist, edges = np.histogram(data[col_name], bins=bins, density=True)
+    x = (edges[1:] + edges[:-1]) / 2.
+    xx, yy = zip(*[(i, j) for (i, j) in zip(x, hist) if j > 0])
+    fig, ax = plt.subplots()
+    ax.plot(xx, yy, marker='.')
+    plt.axvline(x=data[col_name].median(), color='r', linestyle='dashed', linewidth=1)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlabel(x_lb)
+    ax.set_ylabel(y_lb)
+
+
+def var_hex_date(data, variable=None):
+    data.loc[:, 'date'] = data.loc[:, 'date'].astype(str)
+    metrics_dict = dict()
+    # hex_id info
+    for var in ('date', 'year', 'month', 'weekday'):
+        metrics_dict[var] = data[var].values[0]
+
+    # Target statistics
+    metrics_dict[f'{variable}_50'] = data[variable].median()
+    metrics_dict[f'{variable}_25'] = np.nanquantile(data[variable], 0.25)
+    metrics_dict[f'{variable}_75'] = np.nanquantile(data[variable], 0.75)
+
+    return pd.Series(metrics_dict)
