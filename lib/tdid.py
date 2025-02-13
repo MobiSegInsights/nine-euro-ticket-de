@@ -19,6 +19,9 @@ with open(os.path.join(ROOT_dir, 'dbs', 'keys.yaml')) as f:
     keys_manager = yaml.load(f, Loader=yaml.FullLoader)
 
 
+h_groups_ex = ['f_grp_v', 'r_grp_v']
+
+
 def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=None,
                      treatment_months=[6, 7, 8], control_months=[5, ], unit='osm', unit_time='time'):
     df = data.copy()
@@ -60,6 +63,8 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
         num = 4
         for i in range(1, num + 1):
             df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
+        if grp in h_groups_ex:
+            df[f'P_m{0}'] = df['P_m'] & (df[grp] == f'q{0}')
     df.loc[:, f'{unit}'] = df.loc[:, f'{unit}_id']
     # Set the multiindex
     df = df.set_index([f'{unit}_id', unit_time])
