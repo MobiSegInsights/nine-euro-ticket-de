@@ -352,7 +352,7 @@ def var_hex_date(data, variable=None):
     data.loc[:, 'date'] = data.loc[:, 'date'].astype(str)
     metrics_dict = dict()
     # hex_id info
-    for var in ('date', 'year', 'month', 'weekday'):
+    for var in ('date', 'year', 'month', 'weekday', 'district'):
         metrics_dict[var] = data[var].values[0]
 
     # Target statistics

@@ -13,7 +13,7 @@ options(scipen=10000)
 
 gp <- 'all'
 lv <- 'all'
-variable <- 'f_share_v'
+variable <- 'net_rent_v'
 df.date <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '_', lv, '_', variable, '.parquet')))
 # Create a new column with month and day only
 df.date$date <- as.Date(df.date$date)
@@ -69,6 +69,6 @@ time.series.plot <- function(data, policy, var, yl1, yl2){
   return(g1)
 }
 
-g1 <- time.series.plot(data=df.date.dt, policy='dt', var=variable, yl1=11.5, yl2=14.5)
+g1 <- time.series.plot(data=df.date.dt, policy='dt', var=variable, yl1=6.1, yl2=6.4)
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, '_', variable, ".png"),
        plot=g1, width = 12, height = 4, unit = "in", dpi = 300, bg = 'white')
