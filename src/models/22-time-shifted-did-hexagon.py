@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import sqlalchemy
 import numpy as np
+import pickle
 
 
 ROOT_dir = Path(__file__).parent.parent.parent
@@ -20,9 +21,10 @@ def percent_convert(x):
 
 
 # Data paths
-data_folder = 'dbs/combined_did_data/'
+data_folder = 'dbs/combined_did_data_r_nurban/'
+target_file = 'results/tdid/model_results_re_nurban.csv'
 grp, lv = 'all', 'all'
-file2 = data_folder + f'h3_grids_dt_{grp}_{lv}_c.parquet'
+file2 = data_folder + f'h3_grids_dt_{grp}_{lv}.parquet'
 cluster_name = {'Balanced mix': 'q3', 'Low-activity area': 'q1',
                 'High-activity hub': 'q4', 'Recreational area': 'q2'}
 
@@ -46,6 +48,16 @@ class TimeShiftedDiD:
         df_poi = pd.read_sql("""SELECT * FROM h3_poi_cluster_grp;""", con=engine)
         self.data2 = pd.merge(self.data2, df_poi[['h3_id', 'cluster_name']], on='h3_id', how='left')
         self.data2.loc[:, 'cluster'] = self.data2.loc[:, 'cluster_name'].map(cluster_name)
+
+    def bivariate_group(self):
+        h3_id_list = list(set(list(self.data2['h3_id'].unique())))
+        # Load from the pickle file
+        with open(data_folder + 'fr_groups.pkl', 'rb') as f:
+            fr_grp_dict = pickle.load(f)
+
+        # Get the new group
+        for k, v in fr_grp_dict.items():
+            self.data2.loc[:, f'fr_grp_v_{k}'] = self.data2['h3_id'].map(v)
 
     def data_prep(self, grp=None, weekday=None):
         if weekday is not None:
@@ -78,34 +90,39 @@ class TimeShiftedDiD:
 
 if __name__ == '__main__':
     df_r_list = []
+    main_res = False
     for tvar in ('num_visits_wt', 'd_ha_wt'):
         tsd = TimeShiftedDiD(tvar=tvar)
-        tsd.add_poi_grps()
+        # The below poi cluster was done
+        # tsd.add_poi_grps()
+        tsd.bivariate_group()
         policy = 'dt'
-        # Main effect
-        print('Policy', policy, tvar, 'all')
-        rstl = tsd.time_did(weekday=None)
-        rstl.loc[:, 'grp'] = 'all'
-        print(rstl)
-        df_r_list.append(rstl)
-        # Weekday effect
-        print('Policy', policy, tvar, 'all', 'weekday')
-        rstl = tsd.time_did(weekday=[0, 1, 2, 3, 4])
-        rstl.loc[:, 'grp'] = 'all_weekday'
-        print(rstl)
-        df_r_list.append(rstl)
-        # Weekday effect
-        print('Policy', policy, tvar, 'all', 'weekend')
-        rstl = tsd.time_did(weekday=[5, 6])
-        rstl.loc[:, 'grp'] = 'all_weekend'
-        print(rstl)
-        df_r_list.append(rstl)
+        if main_res:
+            # Main effect
+            print('Policy', policy, tvar, 'all')
+            rstl = tsd.time_did(weekday=None)
+            rstl.loc[:, 'grp'] = 'all'
+            print(rstl)
+            df_r_list.append(rstl)
+            # Weekday effect
+            print('Policy', policy, tvar, 'all', 'weekday')
+            rstl = tsd.time_did(weekday=[0, 1, 2, 3, 4])
+            rstl.loc[:, 'grp'] = 'all_weekday'
+            print(rstl)
+            df_r_list.append(rstl)
+            # Weekday effect
+            print('Policy', policy, tvar, 'all', 'weekend')
+            rstl = tsd.time_did(weekday=[5, 6])
+            rstl.loc[:, 'grp'] = 'all_weekend'
+            print(rstl)
+            df_r_list.append(rstl)
         # Heterogeneity effect
-        for grp in ['pt_grp', 'f_grp', 'r_grp', 'f_grp_v', 'r_grp_v', 'cluster']:
+        # Done ['pt_grp', 'f_grp', 'r_grp', 'f_grp_v', 'r_grp_v', 'cluster']
+        for grp in tdid.h_groups_ex_2:
             print('Policy', policy, tvar, grp)
             rstl = tsd.time_did(grp=grp, weekday=None)
             rstl.loc[:, 'grp'] = grp
             print(rstl)
             df_r_list.append(rstl)
     df_r = pd.concat(df_r_list)
-    df_r.to_csv('results/tdid/model_results_r.csv', index=False)
+    df_r.to_csv(target_file, index=False)

@@ -19,7 +19,8 @@ with open(os.path.join(ROOT_dir, 'dbs', 'keys.yaml')) as f:
     keys_manager = yaml.load(f, Loader=yaml.FullLoader)
 
 
-h_groups_ex = ['f_grp_v', 'r_grp_v']
+h_groups_ex_1 = ['f_grp_v', 'r_grp_v']
+h_groups_ex_2 = [f'fr_grp_v_thr_{x}' for x in range(3, 7)]
 
 
 def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=None,
@@ -60,11 +61,17 @@ def data_preparation(data=None, year_list=[2019, 2022], treatment_yr=2022, grp=N
 
     # Add the dummy variable for treatment (P_m)
     if grp is not None:
-        num = 4
-        for i in range(1, num + 1):
-            df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
-        if grp in h_groups_ex:
+        if grp in h_groups_ex_2:
+            for x in range(1, 4):
+                for y in range(1, 4):
+                    df[f'P_m{x}{y}'] = df['P_m'] & (df[grp] == f'q{x}q{y}')
             df[f'P_m{0}'] = df['P_m'] & (df[grp] == f'q{0}')
+        else:
+            num = 4
+            for i in range(1, num + 1):
+                df[f'P_m{i}'] = df['P_m'] & (df[grp] == f'q{i}')
+            if grp in h_groups_ex_1:
+                df[f'P_m{0}'] = df['P_m'] & (df[grp] == f'q{0}')
     df.loc[:, f'{unit}'] = df.loc[:, f'{unit}_id']
     # Set the multiindex
     df = df.set_index([f'{unit}_id', unit_time])

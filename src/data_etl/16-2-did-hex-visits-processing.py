@@ -22,7 +22,7 @@ hex_file_list = [data_folder + x for x in list(os.walk(data_folder))[0][2]]
 def visit_patterns_hex(x):
     data = x.copy()
     # Only consider unique visitors
-    data.drop_duplicates(subset=['device_aid'], inplace=True)
+    # data.drop_duplicates(subset=['device_aid'], inplace=True)
     data.loc[:, 'date'] = data.loc[:, 'date'].astype(str)
     metrics_dict = dict()
     # osm_id info
@@ -65,6 +65,7 @@ class VisitationCompute:
     def __init__(self):
         self.data = None
         self.data_ind = None
+        self.ind_urban_list = None
         self.user = workers.keys_manager['database']['user']
         self.password = workers.keys_manager['database']['password']
         self.port = workers.keys_manager['database']['port']
@@ -74,10 +75,19 @@ class VisitationCompute:
         engine = sqlalchemy.create_engine(
             f'postgresql://{self.user}:{self.password}@localhost:{self.port}/{self.db_name}?gssencmode=disable')
         self.data_ind = pd.read_sql("""SELECT * FROM device_grp;""", con=engine)
+        df_ur = pd.read_sql("""SELECT * FROM device_grp_pd;""", con=engine)
+        # Use 1000 as the threshold to define the urban residents
+        self.ind_urban_list = df_ur.loc[df_ur['pop_density_10km'] >= 1000, 'device_aid'].values
 
-    def visits(self, file=None):
+    def visits(self, file=None, urban=False, all=True):
         self.data = pd.read_parquet(file)
-        self.data = pd.merge(self.data, vc.data_ind.drop(columns=['wt_p']), on='device_aid', how='left')
+        self.data = pd.merge(self.data, self.data_ind.drop(columns=['wt_p']), on='device_aid', how='left')
+        if not all:
+            if urban:
+                self.data = self.data.loc[self.data['device_aid'].isin(self.ind_urban_list), :]
+            else:
+                self.data = self.data.loc[~self.data['device_aid'].isin(self.ind_urban_list), :]
+        print("No. of devices covered: ", self.data['device_aid'].nunique())
 
     def group_agg_visits(self, v=None):
         combi = self.data[['h3_id', 'date', v]].drop_duplicates()
@@ -103,15 +113,26 @@ if __name__ == '__main__':
     vc = VisitationCompute()
     print('Load individual attributes.')
     vc.load_indi()
+    # Specify the covered devices
+    all, urban = False, False
+    if all:
+        target_folder = 'dbs/combined_visits_day_did_hex_r/'
+    else:
+        if urban:
+            target_folder = 'dbs/combined_visits_day_did_hex_r_urban/'
+        else:
+            target_folder = 'dbs/combined_visits_day_did_hex_r_nurban/'
+    print(f'Start processing to {target_folder}.')
+
     for f, i in zip(hex_file_list, range(1, len(hex_file_list) + 1)):
         name = f.split('/')[-1]
-        finished_folder = os.path.join(ROOT_dir, 'dbs/combined_visits_day_did_hex_r2/')
+        finished_folder = os.path.join(ROOT_dir, target_folder)
         finished_list = [finished_folder + x for x in list(os.walk(finished_folder))[0][2]]
         finished_list = [x.split('/')[-1] for x in finished_list]
         if name not in finished_list:
             start = time.time()
             print(f'File {i}/{len(hex_file_list)}...')
-            vc.visits(file=f)
+            vc.visits(file=f, all=all, urban=urban)
             tqdm.pandas()
             combi = vc.data[['h3_id', 'date']].drop_duplicates()
             num_groups = 20
@@ -129,22 +150,10 @@ if __name__ == '__main__':
             vc.data.drop(columns=['batch'], inplace=True)
             df_v.loc[:, 'group'] = 'all'
             df_v.loc[:, 'level'] = 'all'
-            #del rstl
-            #df_v_list = [df_v]
-
-            # Parallel version
-            #grp_list = ['pop_density', 'age', 'net_rent', 'birth_f', 'deprivation']
-            #for grp in grp_list:
-            #    print('Process', grp)
-            #    df_v_list.append(vc.group_agg_visits(v=grp))
-
-            #pd.concat(df_v_list).to_parquet(os.path.join(ROOT_dir, f'dbs/combined_visits_day_did_hex/{name}'))
-            df_v.to_parquet(os.path.join(ROOT_dir, f'dbs/combined_visits_day_did_hex_r2/{name}'))
+            df_v.to_parquet(os.path.join(ROOT_dir, target_folder + f'{name}'))
             del df_v
             end = time.time()
             time_elapsed = (end - start) // 60  # in minutes
             print(f"Group {i} processed and saved in {time_elapsed} minutes.")
         else:
             print(f'File {i}/{len(hex_file_list)} finished.')
-
-
