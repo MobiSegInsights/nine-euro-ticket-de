@@ -7,7 +7,7 @@ from tqdm import tqdm
 from p_tqdm import p_map
 import numpy as np
 import sqlalchemy
-
+import pickle
 
 ROOT_dir = Path(__file__).parent.parent.parent
 sys.path.append(ROOT_dir)
@@ -66,21 +66,33 @@ class VisitationCompute:
         self.data = None
         self.data_ind = None
         self.ind_urban_list = None
+        self.devices2keep = None
         self.user = workers.keys_manager['database']['user']
         self.password = workers.keys_manager['database']['password']
         self.port = workers.keys_manager['database']['port']
         self.db_name = workers.keys_manager['database']['name']
 
-    def load_indi(self):
+    def load_indi(self, all=True, filter=False):
         engine = sqlalchemy.create_engine(
             f'postgresql://{self.user}:{self.password}@localhost:{self.port}/{self.db_name}?gssencmode=disable')
         self.data_ind = pd.read_sql("""SELECT * FROM device_grp;""", con=engine)
-        df_ur = pd.read_sql("""SELECT * FROM device_grp_pd;""", con=engine)
-        # Use 1000 as the threshold to define the urban residents
-        self.ind_urban_list = df_ur.loc[df_ur['pop_density_10km'] >= 1000, 'device_aid'].values
+        if filter:
+            # Load the list from the file
+            with open('dbs/devices2keep.pkl', 'rb') as f:
+                devices2keep = pickle.load(f)
+            print("Loaded list:", len(devices2keep))
+            df_wt = pd.read_parquet('dbs/weight_dt.parquet')
+            self.data_ind = pd.merge(df_wt, self.data_ind.drop(columns=['wt_p']), on='device_aid', how='left')
+            print("No. of devices covered: ", len(self.data_ind))
+        if not all:
+            df_ur = pd.read_sql("""SELECT * FROM device_grp_pd;""", con=engine)
+            # Use 1000 as the threshold to define the urban residents
+            self.ind_urban_list = df_ur.loc[df_ur['pop_density_10km'] >= 1000, 'device_aid'].values
 
     def visits(self, file=None, urban=False, all=True):
         self.data = pd.read_parquet(file)
+        if self.devices2keep is not None:
+            self.data = self.data.loc[self.data['device_aid'].isin(self.devices2keep), :]
         self.data = pd.merge(self.data, self.data_ind.drop(columns=['wt_p']), on='device_aid', how='left')
         if not all:
             if urban:
@@ -111,12 +123,16 @@ class VisitationCompute:
 
 if __name__ == '__main__':
     vc = VisitationCompute()
-    print('Load individual attributes.')
-    vc.load_indi()
     # Specify the covered devices
-    all, urban = False, False
+    all, urban = True, False
+    filter = True
+    print('Load individual attributes.')
+    vc.load_indi(all=all, filter=filter)
     if all:
-        target_folder = 'dbs/combined_visits_day_did_hex_r/'
+        if filter:
+            target_folder = 'dbs/combined_visits_day_did_hex_r_dt/'
+        else:
+            target_folder = 'dbs/combined_visits_day_did_hex_r/'
     else:
         if urban:
             target_folder = 'dbs/combined_visits_day_did_hex_r_urban/'

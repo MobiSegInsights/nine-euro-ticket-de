@@ -13,7 +13,7 @@ options(scipen=10000)
 
 gp <- 'all'
 lv <- 'all'
-df.date <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '_', lv, '.parquet')))
+df.date <- as.data.frame(read_parquet(paste0('results/hex_time_series/', gp, '_', lv, '_dt.parquet')))
 # Create a new column with month and day only
 df.date$date <- as.Date(df.date$date)
 df.date$month_day <- format(df.date$date, "%m-%d")  # Extract month and day as "MM-DD"
@@ -142,6 +142,8 @@ G <- ggarrange(g1, g2, g3, g4, ncol = 2, nrow = 2, labels = c('a', 'b', 'c', 'd'
 ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
        plot=G, width = 13, height = 7, unit = "in", dpi = 300, bg = 'white')
 
+g2 <- time.series.plot(data=df.date.dt, policy='dt', var='visit', yl1=40, yl2=150)
+g4 <- time.series.plot(data=df.date.dt, policy='dt', var='distance', yl1=4, yl2=25)
 G <- ggarrange(g2, g4, ncol = 2, nrow = 1, labels = c('a', 'b'), common.legend = T)
-ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, ".png"),
+ggsave(filename = paste0("figures/manuscript/hex_time_series_", gp, '_', lv, "_dt.png"),
        plot=G, width = 13, height = 4, unit = "in", dpi = 300, bg = 'white')

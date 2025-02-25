@@ -57,8 +57,8 @@ combined_image <- image_append(c(combined_image1, blank_space_w, image7), stack 
 
 image_write(combined_image, "figures/manuscript/pop_grps_h.png")
 
-# ----- Population bivariate groups -------
-kind <- 'urban'
+# ----- Population bivariate groups (kind) -------
+kind <- 'nurban'
 image8 <- read.img(path=paste0("figures/manuscript/bivariate_grps_maps_dt", "_", kind, ".png"), lb='a')
 image10 <- read.img(path=paste0("figures/manuscript/", kind, "_pop_grps_thr3.png"), lb='b')
 image8_width <- image_info(image8)$width
@@ -70,3 +70,16 @@ blank_space_w <- image_blank(image8_width, 2, color = "white")
 combined_image <- image_append(c(image8, blank_space_w, image10), stack = T)
 
 image_write(combined_image, paste0("figures/manuscript/pop_bi_grps_h", kind, ".png"))
+
+# ----- Population bivariate groups ----
+image11 <- read.img(path=paste0("figures/manuscript/bivariate_grps_maps_dt.png"), lb='a')
+image12 <- read.img(path=paste0("figures/manuscript/pop_grps_thr3.png"), lb='b')
+image11_width <- image_info(image11)$width
+
+# Create a blank space image
+blank_space_w <- image_blank(image11_width, 2, color = "white")
+
+# Combine the images side by side
+combined_image <- image_append(c(image11, blank_space_w, image12), stack = T)
+
+image_write(combined_image, paste0("figures/manuscript/pop_bi_grps_h.png"))

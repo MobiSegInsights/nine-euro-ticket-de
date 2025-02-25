@@ -21,8 +21,8 @@ def percent_convert(x):
 
 
 # Data paths
-data_folder = 'dbs/combined_did_data_r_nurban/'
-target_file = 'results/tdid/model_results_re_nurban.csv'
+data_folder = 'dbs/combined_did_data_dt/'
+target_file = 'results/tdid/model_results_dt.csv'   # 'results/tdid/model_results_re_nurban.csv'
 grp, lv = 'all', 'all'
 file2 = data_folder + f'h3_grids_dt_{grp}_{lv}.parquet'
 cluster_name = {'Balanced mix': 'q3', 'Low-activity area': 'q1',
@@ -90,12 +90,13 @@ class TimeShiftedDiD:
 
 if __name__ == '__main__':
     df_r_list = []
-    main_res = False
+    main_res, group_res = True, False
     for tvar in ('num_visits_wt', 'd_ha_wt'):
         tsd = TimeShiftedDiD(tvar=tvar)
         # The below poi cluster was done
-        # tsd.add_poi_grps()
-        tsd.bivariate_group()
+        if group_res:
+            tsd.add_poi_grps()
+            tsd.bivariate_group()
         policy = 'dt'
         if main_res:
             # Main effect
@@ -118,11 +119,12 @@ if __name__ == '__main__':
             df_r_list.append(rstl)
         # Heterogeneity effect
         # Done ['pt_grp', 'f_grp', 'r_grp', 'f_grp_v', 'r_grp_v', 'cluster']
-        for grp in tdid.h_groups_ex_2:
-            print('Policy', policy, tvar, grp)
-            rstl = tsd.time_did(grp=grp, weekday=None)
-            rstl.loc[:, 'grp'] = grp
-            print(rstl)
-            df_r_list.append(rstl)
+        if group_res:
+            for grp in tdid.h_groups_ex_2:
+                print('Policy', policy, tvar, grp)
+                rstl = tsd.time_did(grp=grp, weekday=None)
+                rstl.loc[:, 'grp'] = grp
+                print(rstl)
+                df_r_list.append(rstl)
     df_r = pd.concat(df_r_list)
     df_r.to_csv(target_file, index=False)

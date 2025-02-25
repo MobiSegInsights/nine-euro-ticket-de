@@ -24,22 +24,22 @@ z.level <- 11
 # Berlin
 bbox <- c(12.8609612704,52.2188315508,13.9357904838,52.7999993305)
 names(bbox) <- c("left", "bottom", "right", "top")
-berlin_basemap <- get_stadiamap(bbox, maptype="alidade_smooth_dark", zoom = z.level)
+berlin_basemap <- get_stadiamap(bbox, maptype="stamen_toner_lines", zoom = z.level)
 
 # Hamburg
 bbox <- c(9.5944196795,53.3254946513,10.405576934,53.7709899285)
 names(bbox) <- c("left", "bottom", "right", "top")
-hamburg_basemap <- get_stadiamap(bbox, maptype="alidade_smooth_dark", zoom = z.level)
+hamburg_basemap <- get_stadiamap(bbox, maptype="stamen_toner_lines", zoom = z.level)
 
 # Munich
 bbox <- c(11.1718426327,47.8882900285,11.9756045523,48.3830843127)
 names(bbox) <- c("left", "bottom", "right", "top")
-munich_basemap <- get_stadiamap(bbox, maptype="alidade_smooth_dark", zoom = z.level)
+munich_basemap <- get_stadiamap(bbox, maptype="stamen_toner_lines", zoom = z.level)
 
 # Cologne
 bbox <- c(6.5591869372,50.7046021299,7.3629488568,51.1718079045)
 names(bbox) <- c("left", "bottom", "right", "top")
-cologne_basemap <- get_stadiamap(bbox, maptype="alidade_smooth_dark", zoom = z.level)
+cologne_basemap <- get_stadiamap(bbox, maptype="stamen_toner_lines", zoom = z.level)
 
 # PT access and activity cluster ----
 policy <- 'dt'
@@ -392,9 +392,9 @@ G5 <- ggarrange(g19, g17, g18, ncol = 3, nrow = 1, labels = c('a', 'b', 'c'),
 ggsave(filename = paste0("figures/manuscript/grps_maps_national_", policy, ".png"),
        plot=G5, width = 15, height = 6, unit = "in", dpi = 300, bg = 'white')
 
-# Population bivariate groups ----
+# Population bivariate groups (kind) ----
 policy <- 'dt'
-kind <- 'urban'
+kind <- 'nurban'
 gdf2 <- st_transform(st_read(paste0("results/tdid/h3_groups_", policy, "_", kind, ".shp")), 4326)
 gdf2 <- gdf2 %>%
   select(h3_id, fr_grp_t3) %>%
@@ -411,7 +411,7 @@ g20 <- ggmap(berlin_basemap) +
   geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
           show.legend = FALSE, inherit.aes = FALSE) +
   labs(title = 'Berlin', x='', y=ylb) +
-  bi_scale_fill(pal = "PurpleOr", dim = 3) +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -430,7 +430,7 @@ g21 <- ggmap(hamburg_basemap) +
   geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
           show.legend = FALSE, inherit.aes = FALSE) +
   labs(title = 'Hamburg', x='', y='') +
-  bi_scale_fill(pal = "PurpleOr", dim = 3) +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -448,7 +448,7 @@ g22 <- ggmap(munich_basemap) +
   geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
           show.legend = FALSE, inherit.aes = FALSE) +
   labs(title = 'Munich', x='', y='') +
-  bi_scale_fill(pal = "PurpleOr", dim = 3) +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -466,7 +466,7 @@ g23 <- ggmap(cologne_basemap) +
   geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
           show.legend = FALSE, inherit.aes = FALSE) +
   labs(title = 'Cologne', x='', y='') +
-  bi_scale_fill(pal = "PurpleOr", dim = 3) +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
   annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
   annotation_north_arrow(
     location = "tr", which_north = "true",
@@ -480,7 +480,7 @@ g23 <- ggmap(cologne_basemap) +
         plot.title = element_text(hjust = 0.5)) +
   guides(fill = guide_legend(nrow = 1))
 
-legend <- bi_legend(pal = "PurpleOr",
+legend <- bi_legend(pal = "DkViolet",
                     dim = 3,
                     xlab = "Higher % Foreigner",
                     ylab = "Higher income",
@@ -504,3 +504,97 @@ ggsave(filename = paste0("figures/manuscript/bivariate_grps_maps_", policy, "_",
 #   ggsave(filename = paste0("figures/manuscript/bivariate_grps_maps_", policy, "_", kind, ".png"),
 #        plot=G6, width = 13.4, height = 3, unit = "in", dpi = 300, bg = 'white')
 # }
+
+# Population bivariate groups ----
+policy <- 'dt'
+gdf2 <- st_transform(st_read(paste0("results/tdid/h3_groups_dt_fr.shp")), 4326)
+gdf2 <- gdf2 %>%
+  select(h3_id, fr_grp_t3) %>%
+  filter(fr_grp_t3 != 'q0')
+gdf2$fr_grp <- sub("q(\\d)q(\\d)", "\\1-\\2", gdf2$fr_grp_t3)
+
+g24 <- ggmap(berlin_basemap) +
+  geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
+          show.legend = FALSE, inherit.aes = FALSE) +
+  labs(title = 'Berlin', x='', y='') +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
+  annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
+  annotation_north_arrow(
+    location = "tr", which_north = "true",
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.8, "cm"),  # Adjust arrow height
+    width = unit(0.8, "cm")    # Adjust arrow width
+  ) +
+  theme_void() +
+  theme(plot.margin = margin(0.1,0.1,0.1,0, "cm"),
+        legend.position = 'top',
+        plot.title = element_text(hjust = 0.5),
+        axis.title.y = element_text(size = 12, margin = margin(r = 10), angle=90)) +
+  guides(fill = guide_legend(nrow = 1))
+
+g25 <- ggmap(hamburg_basemap) +
+  geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
+          show.legend = FALSE, inherit.aes = FALSE) +
+  labs(title = 'Hamburg', x='', y='') +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
+  annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
+  annotation_north_arrow(
+    location = "tr", which_north = "true",
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.8, "cm"),  # Adjust arrow height
+    width = unit(0.8, "cm")    # Adjust arrow width
+  ) +
+  theme_void() +
+  theme(plot.margin = margin(0.1,0.1,0.1,0, "cm"),
+        legend.position = 'top',
+        plot.title = element_text(hjust = 0.5)) +
+  guides(fill = guide_legend(nrow = 1))
+
+g26 <- ggmap(munich_basemap) +
+  geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
+          show.legend = FALSE, inherit.aes = FALSE) +
+  labs(title = 'Munich', x='', y='') +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
+  annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
+  annotation_north_arrow(
+    location = "tr", which_north = "true",
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.8, "cm"),  # Adjust arrow height
+    width = unit(0.8, "cm")    # Adjust arrow width
+  ) +
+  theme_void() +
+  theme(plot.margin = margin(0.1,0.1,0.1,0, "cm"),
+        legend.position = 'top',
+        plot.title = element_text(hjust = 0.5)) +
+  guides(fill = guide_legend(nrow = 1))
+
+g27 <- ggmap(cologne_basemap) +
+  geom_sf(data = gdf2, mapping = aes(fill = fr_grp), color = "white", size = 0.1,
+          show.legend = FALSE, inherit.aes = FALSE) +
+  labs(title = 'Cologne', x='', y='') +
+  bi_scale_fill(pal = "DkViolet", dim = 3) +
+  annotation_scale(location = "bl", width_hint = 0.3, text_cex = 0.5) +  # Add a scale bar
+  annotation_north_arrow(
+    location = "tr", which_north = "true",
+    style = north_arrow_fancy_orienteering(text_size = 6),
+    height = unit(0.8, "cm"),  # Adjust arrow height
+    width = unit(0.8, "cm")    # Adjust arrow width
+  ) +
+  theme_void() +
+  theme(plot.margin = margin(0.1,0.1,0.1,0, "cm"),
+        legend.position = 'top',
+        plot.title = element_text(hjust = 0.5)) +
+  guides(fill = guide_legend(nrow = 1))
+
+legend <- bi_legend(pal = "DkViolet",
+                    dim = 3,
+                    xlab = "Higher % Foreigner",
+                    ylab = "Higher income",
+                    size = 10) +
+  theme(aspect.ratio = 1)  # Ensure the legend is square
+
+G7 <- ggarrange(g24, g25, g26, g27, ncol = 4, nrow = 1)
+G70 <- ggarrange(G7, legend, widths = c(1, 0.13), ncol = 2, nrow = 1)
+ggsave(filename = paste0("figures/manuscript/bivariate_grps_maps_", policy, ".png"),
+       plot=G70, width = 15, height = 3, unit = "in", dpi = 300, bg = 'white')
+
